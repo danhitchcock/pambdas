@@ -73,7 +73,9 @@ class Series:
             + "\n"
             + "\n".join(
                 "%s: %s" % (item[0], item[1])
-                for item in zip(self.index, self.data[self.view.start : self.view.sto],)
+                for item in zip(
+                    self.index, self.data[self.view.start : self.view.stop],
+                )
             )
         )
 
@@ -167,7 +169,6 @@ class ILoc:
                 data = self.data
                 name = self.columns[items[1]]
                 index = self.index[items[0]]
-                print(type(index), type(name))
                 view = (
                     slice(
                         self.view[0].start + items[0].start,
@@ -187,7 +188,6 @@ class ILoc:
                 )
                 data = []
                 for col_index in range(items[1].start, items[1].stop):
-                    # print(col_index)
                     data.extend(
                         [self.data[i + col_index * self.step] for i in items[0]]
                     )
