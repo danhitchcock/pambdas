@@ -1,9 +1,12 @@
 # Pandas for Lambdas
 ### My Attempt at a Pure Python version of Lambda
 
-`git clone https://github.com/danhitchcock/pambda.git`
-`pip install -e pam`
-`python pambda/test.py`
+`git clone https://github.com/danhitchcock/pambda.git`  
+
+`pip install -e pam`  
+
+`python pambda/test.py`  
+
 
 Pambda is designed to replicated the behavior of a Pandas DataFrame, but not rely on large libraries or compiled C code.
 
