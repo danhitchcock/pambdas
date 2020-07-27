@@ -253,6 +253,41 @@ class ILoc:
         ] = value
 
 
+class Loc:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __getitem__(self, items):
+        index = self.obj.index
+        columns = self.obj.columns
+
+        items = list(items)
+        # convert boolean to lists
+        if len(items) >= 2:
+
+            for i, (item, names) in enumerate(zip(list(items), [index, columns])):
+                if isinstance(item, (list, set, tuple)):
+                    # bypass for boolean
+                    if isinstance(item[0], bool):
+                        continue
+                    items[i] = [names.index(i) for i in item]
+                elif isinstance(item, slice):
+                    start = None if item.start is None else names.index(item.start)
+                    stop = None if item.stop is None else names.index(item.stop)
+                    items[i] = slice(start, stop)
+                else:
+                    items[i] = names.index(item)
+        return self.obj.iloc[items]
+
+    def __setitem__(self, items, value):
+
+        self.obj.data[
+            self.obj.view[0].start
+            + items[0]
+            + self.obj.step * (self.obj.view[1].start + items[1])
+        ] = value
+
+
 class DataFrame:
     """
     The only mutable attribute is the data.
@@ -269,13 +304,17 @@ class DataFrame:
             self.step = len(data[list(data.keys())[0]])
             self.data = list(itertools.chain(*data.values()))
             self.columns = tuple(data.keys())
-            self.index = tuple(i for i in range(self.step))
             self.shape = (self.step, len(self.columns))
             self.view = (
                 slice(0, self.shape[0]),
                 slice(0, self.shape[1]),
             )
+
+        self.index = index
+        if not index:
+            self.index = tuple(i for i in range(self.step))
         self.iloc = ILoc(self)
+        self.loc = Loc(self)
 
     @classmethod
     def from_data(cls, data, index, columns, view, step):
@@ -290,6 +329,7 @@ class DataFrame:
             self.view[1].stop - self.view[1].start,
         )
         self.iloc = ILoc(self)
+        self.loc = Loc(self)
 
         return self
 
