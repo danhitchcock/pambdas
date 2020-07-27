@@ -12,7 +12,9 @@ Pambda is designed to replicated the behavior of a Pandas DataFrame, but not rel
 
 Data is stored as a flat list, and various series/dataframes have their own view of shared data.
 
-The specific behavior I'm referring to is how views of a DataFrame are related. Take for example
+.loc and .iloc are supported.
+
+The specific behavior I'm attempting to replicate relate to views of a DataFrame are related. Take for example
 
 ```python
 from pam import DataFrame
