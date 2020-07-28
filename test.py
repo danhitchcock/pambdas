@@ -2,16 +2,20 @@ import pandas as pd
 import pam
 import time
 
-one = list(range(4))
-iterations = 1
+one = list(range(200))
+iterations = 100
 
 t0 = time.time()
-df1 = pam.DataFrame({"one": one, "two": one, "three": one}, index=["a", "b", "c", "d"])
-for i in range(iterations):
-    df2 = df1.iloc[1:4, :]
-
+df1 = pam.DataFrame({"one": one, "two": one, "three": one})
+for i in range(100):
+    df1["one"] < 50
 print(time.time() - t0)
-print(df1.loc[["a", "c", "d"], "one":"three"])
+
+t0 = time.time()
+df1 = pd.DataFrame({"one": one, "two": one, "three": one})
+for i in range(100):
+    df1["one"] < 50
+print(time.time() - t0)
 
 # todo add a 'is_view' method
 # todo [:,:] returns just the object itself

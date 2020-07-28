@@ -83,10 +83,70 @@ class Series:
         return str(self)
 
     def __iter__(self, all=False):
-        return iter([d for d in self.data[self.view]])
+        return iter(self.data[self.view])
 
     def values(self):
         return self.data[self.view]
+
+    def __lt__(self, other):
+        ser = self.copy()
+        ser.data = [item < other for item in ser.data]
+        return ser
+
+    def __le__(self, other):
+        ser = self.copy()
+        ser.data = [item <= other for item in ser.data]
+        return ser
+
+    def __gt__(self, other):
+        ser = self.copy()
+        ser.data = [item > other for item in ser.data]
+        return ser
+
+    def __ge__(self, other):
+        ser = self.copy()
+        ser.data = [item >= other for item in ser.data]
+        return ser
+
+    def __eq__(self, other):
+        ser = self.copy()
+        ser.data = [item == other for item in ser.data]
+        return ser
+
+    def __ne__(self, other):
+        ser = self.copy()
+        ser.data = [item != other for item in ser.data]
+        return ser
+
+    def drop(self, labels=None):
+        """
+        Essentially produces a trimmed copy of the series
+
+        column_index: a column to drop
+        :return:
+        """
+        to_delete = self.view.stop
+        num = 0
+        if labels in self.name.index:
+            to_delete = self.name.index(labels)
+            num = 1
+
+        self.data = (
+            self.data[self.view][0:to_delete]
+            + self.data[self.view][to_delete + num : to_delete]
+        )
+        self.index = self.index[0:to_delete] + self.index[to_delete + num :]
+
+        #    and adjust our indexing
+        self.shape = (self.shape[0], self.shape[1] - num)
+        self.view = slice(0, len(self.index), 1)
+        return self
+
+    def copy(self):
+        ser = self.from_data(
+            self.data[self.view], self.index, self.name, slice(0, len(self.index))
+        )
+        return ser
 
 
 class ILoc:
@@ -208,7 +268,6 @@ class ILoc:
                 )
                 data = []
                 for i in items[1]:
-                    # print(col_index)
                     data.extend(
                         self.data[
                             items[0].start
@@ -238,7 +297,6 @@ class ILoc:
                     slice(0, step,),
                     slice(0, len(name),),
                 )
-
             if isinstance(index, tuple) and isinstance(name, (str, int)):
                 return Series.from_data(data, index, name, view)
             if isinstance(index, tuple) and isinstance(name, tuple):
@@ -310,9 +368,10 @@ class DataFrame:
                 slice(0, self.shape[1]),
             )
 
-        self.index = index
-        if not index:
+        if index is None:
             self.index = tuple(i for i in range(self.step))
+        else:
+            self.index = tuple(index)
         self.iloc = ILoc(self)
         self.loc = Loc(self)
 
@@ -371,6 +430,36 @@ class DataFrame:
     def __delitem__(self, cols):
         self.drop(cols)
 
+    def __lt__(self, other):
+        df = self.copy()
+        df.data = [item < other for item in df.data]
+        return df
+
+    def __le__(self, other):
+        df = self.copy()
+        df.data = [item <= other for item in df.data]
+        return df
+
+    def __gt__(self, other):
+        df = self.copy()
+        df.data = [item > other for item in df.data]
+        return df
+
+    def __ge__(self, other):
+        df = self.copy()
+        df.data = [item >= other for item in df.data]
+        return df
+
+    def __eq__(self, other):
+        df = self.copy()
+        df.data = [item == other for item in df.data]
+        return df
+
+    def __ne__(self, other):
+        df = self.copy()
+        df.data = [item != other for item in df.data]
+        return df
+
     def drop(self, labels=None):
         """
         Essentially produces a trimmed copy of the dataframe
@@ -413,6 +502,13 @@ class DataFrame:
         self.shape = (self.shape[0], self.shape[1] - num)
         self.view = (slice(0, len(self.index)), slice(0, len(self.columns)))
         self.step = len(self.index)
+
+    def copy(self):
+        df = DataFrame.from_data(
+            self.data, self.index, self.columns, self.view, self.step
+        )
+        df.drop()
+        return df
 
 
 def clean_slices(phase, info):
