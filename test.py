@@ -12,18 +12,18 @@ mydict = {
     "d": [4, 400, 4000, 30000],
 }
 
-df1 = pam.DataFrame(mydict)
+df1 = pd.DataFrame(mydict)
 a = df1["a"] < 200
 print(a)
 print("one")
 df1.iloc[0, 1] = 99
 print(df1)
-df1.iloc[0:2, 0:3] = [[888, 888, 777], [999, 999, 777]]
+df1.iloc[:, 0] = pd.Series([888, 888, 777, 45])
 print(df1)
-df1.iloc[0:2, [0, 1, 2]] = [[889, 889, 779], [990, 990, 770]]
-print(df1)
-df1.loc[[0, 1], "a":"d"] = [[8, 9, 10], [10, 11, 12]]
-print(df1)
+# df1.iloc[0:2, [0, 1, 2]] = [[889, 889, 779], [990, 990, 770]]
+# print(df1)
+# # df1.loc[[0, 1], "a":"d"] = [[8, 9, 10], [10, 11, 12]]
+# print(df1)
 
 # todo add a 'is_view' method
 # todo [:,:] returns just the object itself

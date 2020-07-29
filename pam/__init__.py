@@ -84,7 +84,7 @@ class Series:
     def __repr__(self):
         return str(self)
 
-    def __iter__(self, all=False):
+    def __iter__(self):
         return iter(self.data[self.view])
 
     def values(self):
@@ -604,9 +604,12 @@ class DataFrame:
         df.data = [item != other for item in df.data]
         return df
 
+    def __iter__(self):
+        return iter(self.columns)
+
     def drop(self, labels=None):
         """
-        Essentially produces a trimmed copy of the dataframe
+        Drop both removes a specified column and trims internal data, producing a copy.
 
         column_index: a column to drop
         :return:
