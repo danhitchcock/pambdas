@@ -2,20 +2,28 @@ import pandas as pd
 import pam
 import time
 
-one = list(range(200))
+one = list(range(10))
 iterations = 100
 
-t0 = time.time()
-df1 = pam.DataFrame({"one": one, "two": one, "three": one})
-for i in range(100):
-    df1["one"] < 50
-print(time.time() - t0)
+mydict = {
+    "a": [1, 100, 1000, 10000],
+    "b": [2, 200, 2000, 20000],
+    "c": [3, 300, 3000, 30000],
+    "d": [4, 400, 4000, 30000],
+}
 
-t0 = time.time()
-df1 = pd.DataFrame({"one": one, "two": one, "three": one})
-for i in range(100):
-    df1["one"] < 50
-print(time.time() - t0)
+df1 = pam.DataFrame(mydict)
+a = df1["a"] < 200
+print(a)
+print("one")
+df1.iloc[0, 1] = 99
+print(df1)
+df1.iloc[0:2, 0:3] = [[888, 888, 777], [999, 999, 777]]
+print(df1)
+df1.iloc[0:2, [0, 1, 2]] = [[889, 889, 779], [990, 990, 770]]
+print(df1)
+df1.loc[[0, 1], "a":"d"] = [[8, 9, 10], [10, 11, 12]]
+print(df1)
 
 # todo add a 'is_view' method
 # todo [:,:] returns just the object itself
