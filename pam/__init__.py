@@ -155,8 +155,6 @@ class Series:
 
 
 class ILoc:
-    ITERABLE_1D = (list, set, tuple, Series)
-
     def __init__(self, obj):
         self.obj = obj
 
@@ -502,24 +500,45 @@ class DataFrame:
     the entire dataset (shape equals len index, columns). Otherwise, a copy is made
     """
 
+    ITERABLE_1D = (list, set, tuple, Series)
+
     def __init__(self, data=None, index=None, columns=None):
         if data is None:
             return
+        self.columns = index
+        self.index = columns
+        self.data = []
         if isinstance(data, dict):
-            print("making from dict")
             self.step = len(data[list(data.keys())[0]])
             self.data = list(itertools.chain(*data.values()))
             self.columns = tuple(data.keys())
-            self.shape = (self.step, len(self.columns))
-            self.view = (
-                slice(0, self.shape[0]),
-                slice(0, self.shape[1]),
-            )
+        elif isinstance(data, list):
+            if isinstance(data[0], self.ITERABLE_1D):
+                self.step = len(data)
+                data = list(zip(*data))
+                for item in data:
+                    self.data.extend(item)
+            elif isinstance(data[0], dict):
+                self.columns = []
+                for d_dict in data:
+                    key, val = next(iter(d_dict.items()))
+                    self.columns.append(key)
+                    self.data.extend(val)
+                self.step = len(val)
 
-        if index is None:
+        if self.columns is None:
+            self.columns = tuple(i for i in range(len(self.data) // self.step))
+        else:
+            self.columns = tuple(self.columns)
+        if self.index is None:
             self.index = tuple(i for i in range(self.step))
         else:
             self.index = tuple(index)
+        self.shape = (self.step, len(self.columns))
+        self.view = (
+            slice(0, self.shape[0]),
+            slice(0, self.shape[1]),
+        )
         self.iloc = ILoc(self)
         self.loc = Loc(self)
 
