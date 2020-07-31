@@ -4,6 +4,8 @@ import gc
 
 
 class Series:
+    ITERABLE_1D = (list, set, tuple)
+
     @classmethod
     def from_data(cls, data, index, name=None, view=slice(None, None)):
         self = cls()
@@ -27,11 +29,12 @@ class Series:
         elif isinstance(data, dict):
             name, data = next(iter(data.items()))
             view = slice(0, len(data), 1)
-        if data and not index:
-            index = list(range(len(data)))
+
+        if data and index is None:
+            index = tuple(range(len(data)))
         self.data = data
         self.view = view
-        self.index = index
+        self.index = tuple(index) if index else None
         self.name = name
         self.iloc = ILoc(self)
 
@@ -87,6 +90,7 @@ class Series:
     def __iter__(self):
         return iter(self.data[self.view])
 
+    @property
     def values(self):
         return self.data[self.view]
 
@@ -111,8 +115,20 @@ class Series:
         return ser
 
     def __eq__(self, other):
+        if isinstance(other, (self.ITERABLE_1D, type(self))):
+            if isinstance(other, type(self)):
+                print(other.index, self.index)
+                if other.index != self.index:
+                    raise ValueError(
+                        "Can only compare identically-labeled " "Series objects"
+                    )
+                else:
+                    data = [item == o for item, o in zip(self, other)]
+        else:
+            data = [item == other for item in self]
+
         ser = self.copy()
-        ser.data = [item == other for item in ser.data]
+        ser.data = data
         return ser
 
     def __ne__(self, other):
@@ -155,6 +171,8 @@ class Series:
 
 
 class ILoc:
+    ITERABLE_1D = (list, set, tuple, Series)
+
     def __init__(self, obj):
         self.obj = obj
 
@@ -505,8 +523,8 @@ class DataFrame:
     def __init__(self, data=None, index=None, columns=None):
         if data is None:
             return
-        self.columns = index
-        self.index = columns
+        self.columns = columns
+        self.index = index
         self.data = []
         if isinstance(data, dict):
             self.step = len(data[list(data.keys())[0]])
@@ -561,16 +579,7 @@ class DataFrame:
 
     def __str__(self):
         string = "DataFrame: " + "\n" + str(self.columns) + "\n"
-        data_cols = []
-        for col_index in range(self.view[1].start, self.view[1].stop):
-            data_cols.append(
-                self.data[
-                    self.view[0].start
-                    + col_index * self.step : self.view[0].stop
-                    + col_index * self.step
-                ]
-            )
-        string += "\n".join(str(d) for d in zip(self.index, *data_cols))
+        string += "\n".join(str(d) for d in zip(self.index, self.values))
         return string
 
     def __getitem__(self, cols):
@@ -675,6 +684,19 @@ class DataFrame:
         )
         df.drop()
         return df
+
+    @property
+    def values(self):
+        data_rows = []
+        for row_index in range(self.view[0].start, self.view[0].stop):
+            data_rows.append(
+                self.data[
+                    row_index
+                    + self.step * self.view[1].start : row_index
+                    + self.step * self.view[1].stop : self.step
+                ]
+            )
+        return data_rows
 
 
 def clean_slices(phase, info):

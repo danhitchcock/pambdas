@@ -4,22 +4,38 @@ import time
 
 one = list(range(10))
 iterations = 100
-
 mydict = {
     "a": [1, 100, 1000, 10000],
     "b": [2, 200, 2000, 20000],
     "c": [3, 300, 3000, 30000],
     "d": [4, 400, 4000, 30000],
 }
+df1 = pam.DataFrame(mydict, index=[10, 11, 12, 13])
+print(df1.iloc[:, 1:].index)
+# print(df1["a"] == pam.Series([1, 100, 1000, 10000], index=[10, 11, 12, 13]))
+# print(df1)
+# print(df1.values)
+# df1 = pam.DataFrame(mydict)
+# print(df1)
+# print(df1.values)
 
-df1 = pd.DataFrame(mydict)
-a = df1["a"] < 200
-print(a)
-print("one")
-df1.iloc[0, 1] = 99
-print(df1)
-df1.iloc[:, 0] = pd.Series([888, 888, 777, 45])
-print(df1)
+#
+# mydict = [{"a": [1, 2, 3]}, {"b": [3, 4, 5]}]
+# df1 = pam.DataFrame(mydict)
+# print(df1)
+# mydict = [pam.Series([0, 1, 2, 3]), pam.Series([6, 5, 4, 3])]
+# df1 = pam.DataFrame(mydict)
+# print(df1)
+# mydict = [pd.Series([0, 1, 2, 3]), pd.Series([6, 5, 4, 3])]
+# df1 = pd.DataFrame(mydict)
+# print(df1)
+# a = df1["a"] < 200
+# print(a)
+# print("one")
+# df1.iloc[0, 1] = 99
+# print(df1)
+# df1.iloc[:, 0] = pd.Series([888, 888, 777, 45])
+# print(df1)
 # df1.iloc[0:2, [0, 1, 2]] = [[889, 889, 779], [990, 990, 770]]
 # print(df1)
 # # df1.loc[[0, 1], "a":"d"] = [[8, 9, 10], [10, 11, 12]]
