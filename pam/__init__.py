@@ -9,10 +9,10 @@ class Series:
     @classmethod
     def from_data(cls, data, index, name=None, view=slice(None, None)):
         self = cls()
-        self.data = data
-        self.index = index
+        self.data = data  # full 1D dataset.
+        self.index = index  # index, unique to series
         self.name = name
-        self.view = view
+        self.view = view  # data[view] = the values
         self.iloc = ILoc(self)
         return self
 
@@ -138,7 +138,7 @@ class Series:
 
     def drop(self, labels=None):
         """
-        Essentially produces a trimmed copy of the series
+        Trims the series, breaking any shared data with others
 
         column_index: a column to drop
         :return:
@@ -190,9 +190,6 @@ class ILoc:
             return self.setitem_df(items, value)
         elif isinstance(self.obj, Series):
             return self.setitem_ser(items, value)
-
-    def getitem_ser(self, items):
-        print(items)
 
     def setitem_df(self, items, value):
         data = self.obj.data
@@ -466,6 +463,55 @@ class ILoc:
             if isinstance(index, tuple) and isinstance(name, tuple):
                 return DataFrame.from_data(data, index, name, view, step)
 
+    def setitem_ser(self, item, value):
+        if isinstance(item, slice):
+            # eg .iloc[1:3]
+            item = slice(
+                item.start if item.start is not None else 0,
+                item.stop if item.stop is not None else self.obj.view.stop,
+            )
+            data = self.obj.data
+            step = self.obj.view.step
+            start = self.obj.view.start + item.start * step
+            stop = self.obj.view.start + item.stop * step
+            for i, val in zip(range(start, stop, step), value):
+                data[i] = val
+
+        if isinstance(item, self.ITERABLE_1D):
+            data = self.obj.data
+            step = self.obj.view.step
+            start = self.obj.view.start
+            for i, val in zip(item, value):
+                data[start + i * step] = val
+
+        if isinstance(item, int):
+            self.obj.data[self.obj.view.start + item * self.obj.view.step] = value
+
+    def getitem_ser(self, item):
+        if isinstance(item, slice):
+            item = slice(
+                item.start if item.start is not None else 0,
+                item.stop if item.stop is not None else self.obj.view.stop,
+            )
+            index = self.obj.index[item]
+            view = slice(
+                self.obj.view.start + item.start * self.obj.view.step,
+                self.obj.view.start + item.stop * self.obj.view.step,
+                self.obj.view.step,
+            )
+            return self.obj.from_data(self.obj.data, index, self.obj.name, view)
+
+        if isinstance(item, self.ITERABLE_1D):
+            index = self.obj.index
+            index = [index[i] for i in item]
+            data = self.obj.values
+            data = [data[i] for i in item]
+            view = slice(0, len(index), 1)
+            return self.obj.__class__.from_data(data, index, self.obj.name, view)
+
+        if isinstance(item, int):
+            return self.obj.values[item]
+
 
 class Loc:
     ITERABLE_1D = (list, set, tuple, Series)
@@ -516,6 +562,10 @@ class DataFrame:
     If a row is added, data is recreated and step is also updated.
     If a column is added, data is appended *only* if the dataframe view covers
     the entire dataset (shape equals len index, columns). Otherwise, a copy is made
+    view is a tuple of two slices, for the row and column. Steps are not taken into
+    account in view, it is high level. This is contrary to Series
+    step = len(index) = shape(0) = view[0].stop - view[0].start
+    len(columns) = shape(1) = view[1].stop - view[1].start
     """
 
     ITERABLE_1D = (list, set, tuple, Series)

@@ -2,17 +2,29 @@ import pandas as pd
 import pam
 import time
 
-one = list(range(10))
-iterations = 100
-mydict = {
-    "a": [1, 100, 1000, 10000],
-    "b": [2, 200, 2000, 20000],
-    "c": [3, 300, 3000, 30000],
-    "d": [4, 400, 4000, 30000],
-}
-df1 = pam.DataFrame(mydict, index=[10, 11, 12, 13])
-print(df1.iloc[:, 1:].index)
-# print(df1["a"] == pam.Series([1, 100, 1000, 10000], index=[10, 11, 12, 13]))
+# one = list(range(10))
+# iterations = 100
+# mydict = {
+#     "a": [1, 100, 1000, 10000],
+#     "b": [2, 200, 2000, 20000],
+#     "c": [3, 300, 3000, 30000],
+#     "d": [4, 400, 4000, 30000],
+# }
+# df1 = pam.DataFrame(mydict, index=[10, 11, 12, 13])
+# print(df1.iloc[:, 1:].index)
+ser = pam.Series([1, 100, 1000, 10000])
+ser2 = ser[:]
+ser3 = ser.iloc[[0, 2]]
+print(ser.iloc[0])
+ser.iloc[0] = 99
+print(ser.iloc[0])
+ser.iloc[0:3] = [999, 888, 777]
+print(ser.iloc[0:3])
+ser.iloc[[0, 1]] = [222, 333]
+print(ser.iloc[[0, 1]])
+print(ser)
+print(ser2)
+print(ser3)
 # print(df1)
 # print(df1.values)
 # df1 = pam.DataFrame(mydict)

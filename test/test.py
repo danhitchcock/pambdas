@@ -67,7 +67,7 @@ def test_init_dataframe():
 
 def test_df_iloc():
 
-    # test dataframe iloc matches a series from a column
+    # test dataframe iloc slice, int matches a series from a column
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
     ser = df.iloc[1:, 0]
     assert ser.index == (1, 2)
@@ -82,3 +82,6 @@ def test_df_iloc():
     assert ser.values == [2, 3]
     assert df.iloc[0, 1] == 2
     assert ser == pam.Series([2, 3], index=[11, 12])
+
+    # test iloc between dataframes share data
+    df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]}, index=[10, 11, 12])
