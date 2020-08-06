@@ -127,7 +127,8 @@ class Series:
                     )
                 else:
                     data = [item == o for item, o in zip(self, other)]
-                    return data
+            else:
+                data = [item == o for item, o in zip(self, other)]
         else:
             data = [item == other for item in self]
 
@@ -207,12 +208,21 @@ class ILoc:
         else:
             n_indexers = 1
             items = [items]
+        data_items = copy(items)
 
+        # convert to bool, or bound
         for i, item in enumerate(items):
             if isinstance(item, self.ITERABLE_1D):
+                # if it's a boolean
                 if item[0] is True or item[0] is False:
                     items[i] = [i for i in range(len(item)) if item[i]]
-
+                data_items[i] = self.obj.bound_iterable_to_df(item, axis=i)
+            elif isinstance(item, slice):
+                items[i] = self.obj.convert_slice(item, axis=i)
+                data_items[i] = self.obj.bound_slice_to_df(item, axis=i)
+            elif isinstance(item, int):
+                data_items[i] = self.obj.bound_int_to_df(item, axis=i)
+        del items
         if n_indexers == 1:
             print("1 indexer is not supported yet")
 
@@ -221,96 +231,119 @@ class ILoc:
             #################
             # Returns an item
             #################
-            if isinstance(items[0], int) and isinstance(items[1], int):
+            if isinstance(data_items[0], int) and isinstance(data_items[1], int):
                 # eg [1, 0]
-                data[items[0] + shape[0] * items[1]] = value
+                print(data_items)
+                print("shape", shape)
+                data[data_items[0] + step * data_items[1]] = value
             ##################
             # Returns a Series
             ##################
-            if isinstance(items[0], slice) and isinstance(items[1], int):
+            if isinstance(data_items[0], slice) and isinstance(data_items[1], int):
                 # eg [1:3, 0]
-                items[0] = self.obj.bound_slice_to_df(items[0], axis=0)
+                if not isinstance(value, self.ITERABLE_1D):
+                    value = [value] * (data_items[0].stop - data_items[0].start)
+
                 data[
-                    items[0].start + step * items[1] : items[0].stop + items[1] * step
+                    data_items[0].start
+                    + step * data_items[1] : data_items[0].stop
+                    + data_items[1] * step
                 ] = value
 
-            if isinstance(items[0], int) and isinstance(items[1], slice):
+            if isinstance(data_items[0], int) and isinstance(data_items[1], slice):
                 # eg .iloc[0, 1:3]
-                # items[1] = bound_slice_column(items[1])
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
-                start = items[0] + step * items[1].start
-                stop = items[0] + step * items[1].stop
+                start = data_items[0] + step * data_items[1].start
+                stop = data_items[0] + step * data_items[1].stop
+                if not isinstance(value, self.ITERABLE_1D):
+                    value = [value] * (data_items[1].stop - data_items[1].start)
+
                 for i, val in zip(range(start, stop, step), value):
                     data[i] = val
-            if isinstance(items[0], int) and isinstance(items[1], self.ITERABLE_1D):
+            if isinstance(data_items[0], int) and isinstance(
+                data_items[1], self.ITERABLE_1D
+            ):
                 # eg .iloc[0, [1, 2, 3]]
+                if not isinstance(value, self.ITERABLE_1D):
+                    value = [value] * (len(data_items[1]))
                 for i, val in zip(items[1], value):
-                    data[items[0] + step * i] = val
-            if isinstance(items[0], (list, set, tuple)) and isinstance(items[1], int):
+                    data[data_items[0] + step * i] = val
+
+            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+                data_items[1], int
+            ):
                 # eg .iloc[[1, 2, 3], 0]
-                for i, val in zip(items[0], value):
-                    data[i + step * items[1]] = val
+                if not isinstance(value, self.ITERABLE_1D):
+                    value = [value] * (len(data_items[0]))
+                for i, val in zip(data_items[0], value):
+                    data[i + step * data_items[1]] = val
 
             #####################
             # Returns a DataFrame
             #####################
             # warning: everything below is very messy.
 
-            if isinstance(items[0], slice) and isinstance(items[1], slice):
+            if isinstance(data_items[0], slice) and isinstance(data_items[1], slice):
                 # e.g. .iloc[1:3, :]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else step,
-                )
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
                 if not isinstance(value, self.ITERABLE_1D):
                     pass
                 # there is almost certainly a better way to do this
                 k = 0
-                value = list(itertools.chain.from_iterable(value))
-                for i in range(items[0].start, items[0].stop):
-                    for j in range(items[1].start, items[1].stop):
+                if isinstance(value, self.ITERABLE_1D):
+                    value = list(itertools.chain.from_iterable(value))
+                else:
+                    value = [value] * (
+                        (data_items[1].stop - data_items[1].start)
+                        * (data_items[0].stop - data_items[0].start)
+                    )
+
+                for i in range(data_items[0].start, data_items[0].stop):
+                    for j in range(data_items[1].start, data_items[1].stop):
                         data[i + j * step] = value[k]
                         k += 1
-            if isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], slice):
+            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+                data_items[1], slice
+            ):
                 # e.g. .iloc[[1, 2], :]
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
                 # there is almost certainly a better way to do this
                 k = 0
-                value = list(itertools.chain.from_iterable(value))
-                for i in items[0]:
-                    for j in range(items[1].start, items[1].stop):
+                if isinstance(value, self.ITERABLE_1D):
+                    value = list(itertools.chain.from_iterable(value))
+                else:
+                    value = [value] * (
+                        (data_items[1].stop - data_items[1].start) * len(data_items[0])
+                    )
+
+                for i in data_items[0]:
+                    for j in range(data_items[1].start, data_items[1].stop):
                         data[i + j * step] = value[k]
                         k += 1
-            if isinstance(items[0], (slice)) and isinstance(items[1], self.ITERABLE_1D):
-                # e.g. .iloc[:, [1,2]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else step,
-                )
-                k = 0
-                value = list(itertools.chain.from_iterable(value))
-                for i in range(items[0].start, items[0].stop):
-                    for j in items[1]:
-                        data[i + j * step] = value[k]
-                        k += 1
-            if isinstance(items[0], self.ITERABLE_1D) and isinstance(
-                items[1], self.ITERABLE_1D
+            if isinstance(data_items[0], slice) and isinstance(
+                data_items[1], self.ITERABLE_1D
             ):
                 # e.g. .iloc[:, [1,2]
                 k = 0
-                value = list(itertools.chain.from_iterable(value))
-                for i in items[0]:
-                    for j in items[1]:
+                if isinstance(value, self.ITERABLE_1D):
+                    value = list(itertools.chain.from_iterable(value))
+                else:
+                    value = [value] * (
+                        (data_items[0].stop - data_items[0].start) * len(data_items[1])
+                    )
+
+                for i in range(data_items[0].start, data_items[0].stop):
+                    for j in data_items[1]:
+                        data[i + j * step] = value[k]
+                        k += 1
+            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+                data_items[1], self.ITERABLE_1D
+            ):
+                # e.g. .iloc[:, [1,2]
+                k = 0
+                if isinstance(value, self.ITERABLE_1D):
+                    value = list(itertools.chain.from_iterable(value))
+                else:
+                    value = [value] * (len(data_items[0]) * len(data_items[1]))
+                for i in data_items[0]:
+                    for j in data_items[1]:
                         data[i + j * step] = value[k]
                         k += 1
 

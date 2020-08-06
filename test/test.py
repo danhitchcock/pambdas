@@ -269,3 +269,36 @@ def test_df_getitem():
     assert ser.name == "one"
     assert df.iloc[0, 1] == 1
     assert all(ser == pam.Series([1, 2], index=[12, 13]))
+
+
+def test_df_setitem():
+
+    # test non-view dataframe
+    df = pam.DataFrame({"one": [0, 1, 2], "two": [1, 2, 3]})
+    df.iloc[0, 0] = 99
+    assert df.iloc[0, 0] == 99
+    df.iloc[:, 0] = 100
+    assert df.iloc[:, 0].values == [100, 100, 100]
+    df.iloc[0, :] = 99
+    assert df.iloc[0, :] == [99, 99]
+    df.iloc[[0, 1, 2], 1] = 9
+    assert df.iloc[0, :] == [9, 9, 9]
+
+    # test on view dataframe
+    df = pam.DataFrame(
+        {
+            "nil": [0, 0, 0, 0, 0],
+            "one": [0, 0, 1, 2, 0],
+            "two": [0, 1, 2, 3, 0],
+            "three": [0, 0, 0, 0, 0],
+        }
+    )
+    df1 = df.iloc[1:-1, 1:-1]
+    df1.iloc[0, 0] = 99
+    assert df1.iloc[0, 0] == 99
+    df1.iloc[:, 0] = 100
+    assert df1.iloc[:, 0].values == [100, 100, 100]
+    df1.iloc[0, :] = 99
+    assert df1.iloc[0, :] == [99, 99]
+    df1.iloc[[0, 1, 2], 1] = 9
+    assert df1.iloc[0, :] == [9, 9, 9]
