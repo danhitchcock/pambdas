@@ -4,6 +4,10 @@ import gc
 
 
 class Series:
+    """
+    view: the actual view of the data, including step
+    """
+
     ITERABLE_1D = (list, set, tuple)
 
     @classmethod
@@ -117,13 +121,13 @@ class Series:
     def __eq__(self, other):
         if isinstance(other, (self.ITERABLE_1D, type(self))):
             if isinstance(other, type(self)):
-                print(other.index, self.index)
                 if other.index != self.index:
                     raise ValueError(
-                        "Can only compare identically-labeled " "Series objects"
+                        "Can only compare identically-labeled Series objects"
                     )
                 else:
                     data = [item == o for item, o in zip(self, other)]
+                    return data
         else:
             data = [item == other for item in self]
 
@@ -225,16 +229,14 @@ class ILoc:
             ##################
             if isinstance(items[0], slice) and isinstance(items[1], int):
                 # eg [1:3, 0]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else step,
-                )
+                items[0] = self.obj.bound_slice_to_df(items[0], axis=0)
                 data[
                     items[0].start + step * items[1] : items[0].stop + items[1] * step
                 ] = value
 
             if isinstance(items[0], int) and isinstance(items[1], slice):
                 # eg .iloc[0, 1:3]
+                # items[1] = bound_slice_column(items[1])
                 items[1] = slice(
                     items[1].start if items[1].start is not None else 0,
                     items[1].stop if items[1].stop is not None else shape[1],
@@ -327,11 +329,20 @@ class ILoc:
         else:
             n_indexers = 1
             items = [items]
+        data_items = copy(items)
 
+        # convert to bool, or bound
         for i, item in enumerate(items):
             if isinstance(item, self.ITERABLE_1D):
+                # if it's a boolean
                 if item[0] is True or item[0] is False:
                     items[i] = [i for i in range(len(item)) if item[i]]
+                data_items[i] = self.obj.bound_iterable_to_df(item, axis=i)
+            elif isinstance(item, slice):
+                items[i] = self.obj.convert_slice(item, axis=i)
+                data_items[i] = self.obj.bound_slice_to_df(item, axis=i)
+            elif isinstance(item, int):
+                data_items[i] = self.obj.bound_int_to_df(item, axis=i)
 
         if n_indexers == 1:
             print("1 indexer is not supported yet")
@@ -343,43 +354,39 @@ class ILoc:
             #################
             if isinstance(items[0], int) and isinstance(items[1], int):
                 # eg [1, 0]
-                return data[items[0] + shape[0] * items[1]]
+                return data[data_items[0] + step * data_items[1]]
             ##################
             # Returns a Series
             ##################
             if isinstance(items[0], slice) and isinstance(items[1], int):
                 # eg [1:3, 0]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else step,
-                )
                 index = index[items[0]]
                 name = columns[items[1]]
                 data = data
-                view = slice(items[0].start, items[0].stop, 1)
+                view = slice(
+                    data_items[0].start + data_items[1] * step,
+                    data_items[0].stop + data_items[1] * step,
+                )
             if isinstance(items[0], int) and isinstance(items[1], slice):
                 # eg .iloc[0, 1:3]
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
                 name = index[items[0]]
                 index = columns[items[1]]
-                start = items[0] + step * items[1].start
-                stop = items[0] + step * items[1].stop
+                start = data_items[0] + step * data_items[1].start
+                stop = data_items[0] + step * data_items[1].stop
                 view = slice(start, stop, step)
                 data = data
             if isinstance(items[0], int) and isinstance(items[1], self.ITERABLE_1D):
                 # eg .iloc[0, [1, 2, 3]]
                 name = index[items[0]]
                 index = tuple(columns[i] for i in items[1])
-                data = [data[items[0] + step * i] for i in items[1]]
+                data = [data[data_items[0] + step * i] for i in data_items[1]]
+                # returns a copy of the data, so index starts at zero
                 view = slice(0, len(items[1]))
             if isinstance(items[0], (list, set, tuple)) and isinstance(items[1], int):
                 # eg .iloc[[1, 2, 3], 0]
                 name = columns[items[1]]
                 index = tuple(index[i] for i in items[0])
-                data = [data[i + step * items[1]] for i in items[0]]
+                data = [data[i + step * data_items[i][1]] for i in data_items[i][0]]
                 view = slice(0, len(items[0]))
 
             #####################
@@ -387,58 +394,42 @@ class ILoc:
             #####################
             if isinstance(items[0], slice) and isinstance(items[1], slice):
                 # e.g. .iloc[1:3, :]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else step,
-                )
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
                 data = data
                 name = columns[items[1]]
                 index = index[items[0]]
-                view = (
-                    slice(
-                        view[0].start + items[0].start, view[0].start + items[0].stop,
-                    ),
-                    slice(
-                        view[1].start + items[1].start, view[1].start + items[1].stop,
-                    ),
-                )
+                view = tuple(data_items)
                 step = step
             if isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], slice):
                 # e.g. .iloc[[1, 2], :]
-                items[1] = slice(
-                    items[1].start if items[1].start is not None else 0,
-                    items[1].stop if items[1].stop is not None else shape[1],
-                )
+                # iterate through row
                 ndata = []
-                for col_index in range(items[1].start, items[1].stop):
-                    ndata.extend([data[i + col_index * step] for i in items[0]])
+                for col_index in range(data_items[1].start, data_items[1].stop):
+                    ndata.extend([data[i + col_index * step] for i in data_items[0]])
                 data = ndata
                 name = columns[items[1]]
                 index = tuple(index[i] for i in items[0])
                 step = len(index)
+                # retuns a copy, so view starts at zero
                 view = (
                     slice(0, step,),
                     slice(0, len(name),),
                 )
-            if isinstance(items[0], (slice)) and isinstance(items[1], self.ITERABLE_1D):
+            if isinstance(items[0], slice) and isinstance(items[1], self.ITERABLE_1D):
                 # e.g. .iloc[:, [1,2]
-                items[0] = slice(
-                    items[0].start if items[0].start is not None else 0,
-                    items[0].stop if items[0].stop is not None else shape[0],
-                )
                 ndata = []
-                for i in items[1]:
+                for i in data_items[1]:
                     ndata.extend(
-                        data[items[0].start + i * step : items[0].stop + i * step]
+                        data[
+                            data_items[0].start
+                            + i * step : data_items[0].stop
+                            + i * step
+                        ]
                     )
                 data = ndata
                 index = index[items[0]]
                 name = tuple(columns[i] for i in items[1])
                 step = len(index)
+                # return a copy, view starts at zero
                 view = (
                     slice(0, step,),
                     slice(0, len(name),),
@@ -448,12 +439,13 @@ class ILoc:
             ):
                 # e.g. .iloc[:, [1,2]
                 ndata = []
-                for i in items[1]:
-                    ndata.extend([data[j + i * step] for j in items[0]])
+                for i in data_items[1]:
+                    ndata.extend([data[j + i * step] for j in data_items[0]])
                 data = ndata
                 index = tuple(index[i] for i in items[0])
                 name = tuple(columns[i] for i in items[1])
                 step = len(index)
+                # return a copy, view starts at zero
                 view = (
                     slice(0, step,),
                     slice(0, len(name),),
@@ -729,6 +721,10 @@ class DataFrame:
         self.step = len(self.index)
 
     def copy(self):
+        """
+        Creates a copy of the dataframe and trims the data with self.drop
+        :return:
+        """
         df = DataFrame.from_data(
             self.data, self.index, self.columns, self.view, self.step
         )
@@ -747,6 +743,105 @@ class DataFrame:
                 ]
             )
         return data_rows
+
+    def bound_int_to_df(self, raw_int, axis):
+        """
+        Transforms an index int to the actual axis index of data
+
+        :param raw_int:
+        :param axis:
+        :return:
+        """
+        if axis in [0, "row", "rows"]:
+            view_min = self.view[0].start
+            view_max = self.view[0].stop
+        elif axis in [1, "column", "columns"]:
+            view_min = self.view[1].start
+            view_max = self.view[1].stop
+        else:
+            raise UserWarning
+
+        # handle negative ints
+        if raw_int < 0:
+            start = view_max + raw_int
+        else:
+            start = view_min + raw_int
+
+        # check bounds
+        if start > view_max or start < view_min:
+            raise IndexError
+
+        return start
+
+    def bound_slice_to_df(self, raw_slice, axis):
+        """
+        Transforms a slice to the actual axis view for the data
+        :param raw_slice:
+        :return:
+        """
+        if axis in [0, "row", "rows"]:
+            view_start = self.view[0].start
+            view_stop = self.view[0].stop
+        elif axis in [1, "column", "columns"]:
+            view_start = self.view[1].start
+            view_stop = self.view[1].stop
+        else:
+            pass
+
+        if raw_slice.start:
+            if raw_slice.start < 0:
+                # if its negative, subtract from the end or the start
+                start = max(view_stop + raw_slice.start, view_start)
+            else:
+                start = raw_slice.start + view_start
+        else:
+            start = view_start
+
+        if raw_slice.stop:
+            if raw_slice.stop < 0:
+                stop = max(view_stop + raw_slice.stop, view_start)
+            else:
+                stop = view_start + raw_slice.stop
+        else:
+            stop = view_stop
+        return slice(start, stop,)
+
+    def bound_iterable_to_df(self, raw_iter, axis):
+        """
+        Converts indeces to the actual data indicies
+        :param raw_iter:
+        :param axis:
+        :return:
+        """
+        return [self.bound_int_to_df(item, axis) for item in raw_iter]
+
+    def convert_slice(self, raw_slice, axis):
+        """
+        Removes the None from the slice and replaces it with length of rows or columns.
+        doesn't adjust based on view
+        :param raw_slice:
+        :param axis:
+        :return:
+        """
+        if axis in [0, "row", "rows"]:
+            max_stop = len(self.index)
+        elif axis in [1, "columns", "cols", "col"]:
+            max_stop = len(self.columns)
+
+        if not raw_slice.start:
+            start = 0
+        elif raw_slice.start < 0:
+            start = max(0, max_stop + raw_slice.start)
+        else:
+            start = raw_slice.start
+
+        if not raw_slice.stop:
+            stop = max_stop
+        elif raw_slice.stop < 0:
+            stop = max(0, max_stop + raw_slice.stop)
+        else:
+            stop = raw_slice.stop
+        return slice(start, stop)
 
 
 def clean_slices(phase, info):
