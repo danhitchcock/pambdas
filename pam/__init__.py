@@ -100,15 +100,14 @@ class Series:
             return self.data[item]
 
     def __str__(self):
+
         return (
             "Series Name: "
             + str(self.name)
             + "\n"
             + "\n".join(
                 "%s: %s" % (item[0], item[1])
-                for item in zip(
-                    self.index, self.data[self.view.start : self.view.stop],
-                )
+                for item in zip(self.index, self.data[self.view],)
             )
         )
 
@@ -222,15 +221,12 @@ class ILoc:
     def setitem_df(self, items, value):
         data = self.obj.data
         step = self.obj.step
-        shape = self.obj.shape
 
-        # tuples are packages indices
+        # if it's a tuple, its multiple indicies. Otherwise, make a dummy index
         if isinstance(items, tuple):
-            n_indexers = len(items)
             items = list(items)
         else:
-            n_indexers = 1
-            items = [items]
+            items = [items, slice(None, None)]
         data_items = copy(items)
 
         # convert to bool, or bound
@@ -246,127 +242,123 @@ class ILoc:
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
         del items
-        if n_indexers == 1:
-            print("1 indexer is not supported yet")
 
-        # convert boolean to lists
-        if n_indexers == 2:
-            #################
-            # Returns an item
-            #################
-            if isinstance(data_items[0], int) and isinstance(data_items[1], int):
-                # eg [1, 0]
-                data[data_items[0] + step * data_items[1]] = value
-            ##################
-            # Returns a Series
-            ##################
-            if isinstance(data_items[0], slice) and isinstance(data_items[1], int):
-                # eg [1:3, 0]
-                if not isinstance(value, self.ITERABLE_1D):
-                    value = [value] * (data_items[0].stop - data_items[0].start)
+        #################
+        # Returns an item
+        #################
+        if isinstance(data_items[0], int) and isinstance(data_items[1], int):
+            # eg [1, 0]
+            data[data_items[0] + step * data_items[1]] = value
+        ##################
+        # Returns a Series
+        ##################
+        if isinstance(data_items[0], slice) and isinstance(data_items[1], int):
+            # eg [1:3, 0]
+            if not isinstance(value, self.ITERABLE_1D):
+                value = [value] * (data_items[0].stop - data_items[0].start)
 
-                data[
-                    data_items[0].start
-                    + step * data_items[1] : data_items[0].stop
-                    + data_items[1] * step
-                ] = value
+            data[
+                data_items[0].start
+                + step * data_items[1] : data_items[0].stop
+                + data_items[1] * step
+            ] = value
 
-            if isinstance(data_items[0], int) and isinstance(data_items[1], slice):
-                # eg .iloc[0, 1:3]
-                start = data_items[0] + step * data_items[1].start
-                stop = data_items[0] + step * data_items[1].stop
-                if not isinstance(value, self.ITERABLE_1D):
-                    value = [value] * (data_items[1].stop - data_items[1].start)
+        if isinstance(data_items[0], int) and isinstance(data_items[1], slice):
+            # eg .iloc[0, 1:3]
+            start = data_items[0] + step * data_items[1].start
+            stop = data_items[0] + step * data_items[1].stop
+            if not isinstance(value, self.ITERABLE_1D):
+                value = [value] * (data_items[1].stop - data_items[1].start)
 
-                for i, val in zip(range(start, stop, step), value):
-                    data[i] = val
-            if isinstance(data_items[0], int) and isinstance(
-                data_items[1], self.ITERABLE_1D
-            ):
-                # eg .iloc[0, [1, 2, 3]]
-                if not isinstance(value, self.ITERABLE_1D):
-                    value = [value] * (len(data_items[1]))
-                for i, val in zip(items[1], value):
-                    data[data_items[0] + step * i] = val
+            for i, val in zip(range(start, stop, step), value):
+                data[i] = val
+        if isinstance(data_items[0], int) and isinstance(
+            data_items[1], self.ITERABLE_1D
+        ):
+            # eg .iloc[0, [1, 2, 3]]
+            if not isinstance(value, self.ITERABLE_1D):
+                value = [value] * (len(data_items[1]))
+            for i, val in zip(items[1], value):
+                data[data_items[0] + step * i] = val
 
-            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
-                data_items[1], int
-            ):
-                # eg .iloc[[1, 2, 3], 0]
-                if not isinstance(value, self.ITERABLE_1D):
-                    value = [value] * (len(data_items[0]))
-                for i, val in zip(data_items[0], value):
-                    data[i + step * data_items[1]] = val
+        if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+            data_items[1], int
+        ):
+            # eg .iloc[[1, 2, 3], 0]
+            if not isinstance(value, self.ITERABLE_1D):
+                value = [value] * (len(data_items[0]))
+            for i, val in zip(data_items[0], value):
+                data[i + step * data_items[1]] = val
 
-            #####################
-            # Returns a DataFrame
-            #####################
-            # warning: everything below is very messy.
+        #####################
+        # Returns a DataFrame
+        #####################
+        # warning: everything below is very messy.
 
-            if isinstance(data_items[0], slice) and isinstance(data_items[1], slice):
-                # e.g. .iloc[1:3, :]
-                if not isinstance(value, self.ITERABLE_1D):
-                    pass
-                # there is almost certainly a better way to do this
-                k = 0
-                if isinstance(value, self.ITERABLE_1D):
-                    value = list(itertools.chain.from_iterable(value))
-                else:
-                    value = [value] * (
-                        (data_items[1].stop - data_items[1].start)
-                        * (data_items[0].stop - data_items[0].start)
-                    )
+        if isinstance(data_items[0], slice) and isinstance(data_items[1], slice):
+            # e.g. .iloc[1:3, :]
+            if not isinstance(value, self.ITERABLE_1D):
+                pass
+            # there is almost certainly a better way to do this
+            k = 0
+            if isinstance(value, self.ITERABLE_1D):
+                value = list(itertools.chain.from_iterable(value))
+            else:
+                value = [value] * (
+                    (data_items[1].stop - data_items[1].start)
+                    * (data_items[0].stop - data_items[0].start)
+                )
 
-                for i in range(data_items[0].start, data_items[0].stop):
-                    for j in range(data_items[1].start, data_items[1].stop):
-                        data[i + j * step] = value[k]
-                        k += 1
-            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
-                data_items[1], slice
-            ):
-                # e.g. .iloc[[1, 2], :]
-                # there is almost certainly a better way to do this
-                k = 0
-                if isinstance(value, self.ITERABLE_1D):
-                    value = list(itertools.chain.from_iterable(value))
-                else:
-                    value = [value] * (
-                        (data_items[1].stop - data_items[1].start) * len(data_items[0])
-                    )
+            for i in range(data_items[0].start, data_items[0].stop):
+                for j in range(data_items[1].start, data_items[1].stop):
+                    data[i + j * step] = value[k]
+                    k += 1
+        if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+            data_items[1], slice
+        ):
+            # e.g. .iloc[[1, 2], :]
+            # there is almost certainly a better way to do this
+            k = 0
+            if isinstance(value, self.ITERABLE_1D):
+                value = list(itertools.chain.from_iterable(value))
+            else:
+                value = [value] * (
+                    (data_items[1].stop - data_items[1].start) * len(data_items[0])
+                )
 
-                for i in data_items[0]:
-                    for j in range(data_items[1].start, data_items[1].stop):
-                        data[i + j * step] = value[k]
-                        k += 1
-            if isinstance(data_items[0], slice) and isinstance(
-                data_items[1], self.ITERABLE_1D
-            ):
-                # e.g. .iloc[:, [1,2]
-                k = 0
-                if isinstance(value, self.ITERABLE_1D):
-                    value = list(itertools.chain.from_iterable(value))
-                else:
-                    value = [value] * (
-                        (data_items[0].stop - data_items[0].start) * len(data_items[1])
-                    )
+            for i in data_items[0]:
+                for j in range(data_items[1].start, data_items[1].stop):
+                    data[i + j * step] = value[k]
+                    k += 1
+        if isinstance(data_items[0], slice) and isinstance(
+            data_items[1], self.ITERABLE_1D
+        ):
+            # e.g. .iloc[:, [1,2]
+            k = 0
+            if isinstance(value, self.ITERABLE_1D):
+                value = list(itertools.chain.from_iterable(value))
+            else:
+                value = [value] * (
+                    (data_items[0].stop - data_items[0].start) * len(data_items[1])
+                )
 
-                for i in range(data_items[0].start, data_items[0].stop):
-                    for j in data_items[1]:
-                        data[i + j * step] = value[k]
-                        k += 1
-            if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
-                data_items[1], self.ITERABLE_1D
-            ):
-                # e.g. .iloc[:, [1,2]
-                k = 0
-                if isinstance(value, self.ITERABLE_1D):
-                    value = list(itertools.chain.from_iterable(value))
-                else:
-                    value = [value] * (len(data_items[0]) * len(data_items[1]))
-                for i in data_items[0]:
-                    for j in data_items[1]:
-                        data[i + j * step] = value[k]
-                        k += 1
+            for i in range(data_items[0].start, data_items[0].stop):
+                for j in data_items[1]:
+                    data[i + j * step] = value[k]
+                    k += 1
+        if isinstance(data_items[0], self.ITERABLE_1D) and isinstance(
+            data_items[1], self.ITERABLE_1D
+        ):
+            # e.g. .iloc[:, [1,2]
+            k = 0
+            if isinstance(value, self.ITERABLE_1D):
+                value = list(itertools.chain.from_iterable(value))
+            else:
+                value = [value] * (len(data_items[0]) * len(data_items[1]))
+            for i in data_items[0]:
+                for j in data_items[1]:
+                    data[i + j * step] = value[k]
+                    k += 1
 
     def getitem_df(self, items):
         data = self.obj.data
@@ -375,13 +367,11 @@ class ILoc:
         step = self.obj.step
         view = self.obj.view
 
-        # tuples are packages indices
+        # if it's a tuple, its multiple indicies. Otherwise, make a dummy index
         if isinstance(items, tuple):
-            n_indexers = len(items)
             items = list(items)
         else:
-            n_indexers = 1
-            items = [items]
+            items = [items, slice(None, None)]
         data_items = copy(items)
 
         # convert to bool, or bound
@@ -396,117 +386,109 @@ class ILoc:
                 data_items[i] = self.obj.bound_slice_to_df(item, axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
-
-        if n_indexers == 1:
-            print("1 indexer is not supported yet")
-
         # convert boolean to lists
-        if n_indexers == 2:
-            #################
-            # Returns an item
-            #################
-            if isinstance(items[0], int) and isinstance(items[1], int):
-                # eg [1, 0]
-                return data[data_items[0] + step * data_items[1]]
-            ##################
-            # Returns a Series
-            ##################
-            if isinstance(items[0], slice) and isinstance(items[1], int):
-                # eg [1:3, 0]
-                index = index[items[0]]
-                name = columns[items[1]]
-                data = data
-                view = slice(
-                    data_items[0].start + data_items[1] * step,
-                    data_items[0].stop + data_items[1] * step,
-                )
-            if isinstance(items[0], int) and isinstance(items[1], slice):
-                # eg .iloc[0, 1:3]
-                name = index[items[0]]
-                index = columns[items[1]]
-                start = data_items[0] + step * data_items[1].start
-                stop = data_items[0] + step * data_items[1].stop
-                view = slice(start, stop, step)
-                data = data
-            if isinstance(items[0], int) and isinstance(items[1], self.ITERABLE_1D):
-                # eg .iloc[0, [1, 2, 3]]
-                name = index[items[0]]
-                index = tuple(columns[i] for i in items[1])
-                data = [data[data_items[0] + step * i] for i in data_items[1]]
-                # returns a copy of the data, so index starts at zero
-                view = slice(0, len(items[1]))
-            if isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], int):
-                # eg .iloc[[1, 2, 3], 0]
-                name = columns[items[1]]
-                index = tuple(index[i] for i in items[0])
-                data = [data[i + step * data_items[i][1]] for i in data_items[i][0]]
-                view = slice(0, len(items[0]))
 
-            #####################
-            # Returns a DataFrame
-            #####################
-            if isinstance(items[0], slice) and isinstance(items[1], slice):
-                # e.g. .iloc[1:3, :]
-                data = data
-                name = columns[items[1]]
-                index = index[items[0]]
-                view = tuple(data_items)
-                step = step
-            if isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], slice):
-                # e.g. .iloc[[1, 2], :]
-                # iterate through row
-                ndata = []
-                for col_index in range(data_items[1].start, data_items[1].stop):
-                    ndata.extend([data[i + col_index * step] for i in data_items[0]])
-                data = ndata
-                name = columns[items[1]]
-                index = tuple(index[i] for i in items[0])
-                step = len(index)
-                # retuns a copy, so view starts at zero
-                view = (
-                    slice(0, step,),
-                    slice(0, len(name),),
+        #################
+        # Returns an item
+        #################
+        if isinstance(items[0], int) and isinstance(items[1], int):
+            # eg [1, 0]
+            return data[data_items[0] + step * data_items[1]]
+        ##################
+        # Returns a Series
+        ##################
+        if isinstance(items[0], slice) and isinstance(items[1], int):
+            # eg [1:3, 0]
+            index = index[items[0]]
+            name = columns[items[1]]
+            data = data
+            view = slice(
+                data_items[0].start + data_items[1] * step,
+                data_items[0].stop + data_items[1] * step,
+            )
+        elif isinstance(items[0], int) and isinstance(items[1], slice):
+            # eg .iloc[0, 1:3]
+            name = index[items[0]]
+            index = columns[items[1]]
+            start = data_items[0] + step * data_items[1].start
+            stop = data_items[0] + step * data_items[1].stop
+            view = slice(start, stop, step)
+            data = data
+        elif isinstance(items[0], int) and isinstance(items[1], self.ITERABLE_1D):
+            # eg .iloc[0, [1, 2, 3]]
+            name = index[items[0]]
+            index = tuple(columns[i] for i in items[1])
+            data = [data[data_items[0] + step * i] for i in data_items[1]]
+            # returns a copy of the data, so index starts at zero
+            view = slice(0, len(items[1]))
+        elif isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], int):
+            # eg .iloc[[1, 2, 3], 0]
+            name = columns[items[1]]
+            index = tuple(index[i] for i in items[0])
+            data = [data[i + step * data_items[i][1]] for i in data_items[i][0]]
+            view = slice(0, len(items[0]))
+
+        #####################
+        # Returns a DataFrame
+        #####################
+        elif isinstance(items[0], slice) and isinstance(items[1], slice):
+            # e.g. .iloc[1:3, :]
+            data = data
+            name = columns[items[1]]
+            index = index[items[0]]
+            view = tuple(data_items)
+            step = step
+        elif isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], slice):
+            # e.g. .iloc[[1, 2], :]
+            # iterate through row
+            ndata = []
+            for col_index in range(data_items[1].start, data_items[1].stop):
+                ndata.extend([data[i + col_index * step] for i in data_items[0]])
+            data = ndata
+            name = columns[items[1]]
+            index = tuple(index[i] for i in items[0])
+            step = len(index)
+            # retuns a copy, so view starts at zero
+            view = (
+                slice(0, step,),
+                slice(0, len(name),),
+            )
+        elif isinstance(items[0], slice) and isinstance(items[1], self.ITERABLE_1D):
+            # e.g. .iloc[:, [1,2]
+            ndata = []
+            for i in data_items[1]:
+                ndata.extend(
+                    data[data_items[0].start + i * step : data_items[0].stop + i * step]
                 )
-            if isinstance(items[0], slice) and isinstance(items[1], self.ITERABLE_1D):
-                # e.g. .iloc[:, [1,2]
-                ndata = []
-                for i in data_items[1]:
-                    ndata.extend(
-                        data[
-                            data_items[0].start
-                            + i * step : data_items[0].stop
-                            + i * step
-                        ]
-                    )
-                data = ndata
-                index = index[items[0]]
-                name = tuple(columns[i] for i in items[1])
-                step = len(index)
-                # return a copy, view starts at zero
-                view = (
-                    slice(0, step,),
-                    slice(0, len(name),),
-                )
-            if isinstance(items[0], self.ITERABLE_1D) and isinstance(
-                items[1], self.ITERABLE_1D
-            ):
-                # e.g. .iloc[:, [1,2]
-                ndata = []
-                for i in data_items[1]:
-                    ndata.extend([data[j + i * step] for j in data_items[0]])
-                data = ndata
-                index = tuple(index[i] for i in items[0])
-                name = tuple(columns[i] for i in items[1])
-                step = len(index)
-                # return a copy, view starts at zero
-                view = (
-                    slice(0, step,),
-                    slice(0, len(name),),
-                )
-            if isinstance(index, tuple) and isinstance(name, (str, int)):
-                return Series.from_data(data, index, name, view)
-            if isinstance(index, tuple) and isinstance(name, tuple):
-                return DataFrame.from_data(data, index, name, view, step)
+            data = ndata
+            index = index[items[0]]
+            name = tuple(columns[i] for i in items[1])
+            step = len(index)
+            # return a copy, view starts at zero
+            view = (
+                slice(0, step,),
+                slice(0, len(name),),
+            )
+        elif isinstance(items[0], self.ITERABLE_1D) and isinstance(
+            items[1], self.ITERABLE_1D
+        ):
+            # e.g. .iloc[:, [1,2]
+            ndata = []
+            for i in data_items[1]:
+                ndata.extend([data[j + i * step] for j in data_items[0]])
+            data = ndata
+            index = tuple(index[i] for i in items[0])
+            name = tuple(columns[i] for i in items[1])
+            step = len(index)
+            # return a copy, view starts at zero
+            view = (
+                slice(0, step,),
+                slice(0, len(name),),
+            )
+        if isinstance(index, tuple) and isinstance(name, (str, int)):
+            return Series.from_data(data, index, name, view)
+        if isinstance(index, tuple) and isinstance(name, tuple):
+            return DataFrame.from_data(data, index, name, view, step)
 
     def setitem_ser(self, item, value):
         if isinstance(item, slice):
