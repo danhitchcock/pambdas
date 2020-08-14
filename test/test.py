@@ -12,6 +12,12 @@ def test_init_series():
     assert ser.values == [1, 100, 1000, 10000]
 
 
+def test_series_drop():
+    a = pam.Series([0, 1, 2, 3])
+    a.drop(2)
+    print(a)
+
+
 def test_init_dataframe():
     # test dictionary, default index
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
