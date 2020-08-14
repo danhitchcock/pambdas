@@ -206,7 +206,6 @@ class ILoc:
         self.obj = obj
 
     def __getitem__(self, items):
-
         # tacky, but whatever
         if isinstance(self.obj, DataFrame):
             return self.getitem_df(items)
@@ -689,6 +688,7 @@ class DataFrame:
         return string
 
     def __getitem__(self, cols):
+
         return self.loc[:, cols]
 
     def __setitem__(self, key, value):
@@ -701,7 +701,12 @@ class DataFrame:
         # if it is a single item, call .loc[:, key]
         # if is a slice, call .loc[key, :]
         # if its an iterable call .loc[:, key]
-        pass
+        if isinstance(key, tuple):
+            self.loc[key] = value
+        elif isinstance(key, slice):
+            self.loc[key, :] = value
+        else:
+            self.loc[:, key] = value
 
     def __delitem__(self, cols):
         self.drop(cols)

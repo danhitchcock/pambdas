@@ -302,3 +302,19 @@ def test_df_setitem():
     assert df1.iloc[0, :] == [99, 99]
     df1.iloc[[0, 1, 2], 1] = 9
     assert df1.iloc[0, :] == [9, 9, 9]
+
+
+def test_df_setitem_create():
+    long_df = pam.DataFrame(
+        {
+            "a": [0, 0, 0, 0, 0],
+            "one": [0, 0, 1, 2, 0],
+            "two": [0, 1, 2, 3, 0],
+            "three": [2, 3, 4, 5],
+            "b": [0, 0, 0, 0, 0],
+        },
+        index=[10, 11, 12, 13, 14],
+    )
+    df = long_df.iloc[1:-1, 1:-1]
+    df.loc[:, "dne"] = [99, 99, 99]
+    df.loc["dne", :] = 100
