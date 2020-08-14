@@ -3,6 +3,32 @@ import itertools
 import gc
 
 
+class NaN:
+    def __eq__(self, *args):
+        return False
+
+    def __lt__(self, *args):
+        return False
+
+    def __le__(self, *args):
+        return False
+
+    def __gt__(self, *args):
+        return False
+
+    def __ge__(self, *args):
+        return False
+
+    def __str__(self):
+        return "NaN"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+nan = NaN()
+
+
 class Series:
     """
     view: the actual view of the data, including step
@@ -43,8 +69,6 @@ class Series:
         self.iloc = ILoc(self)
 
     def __setitem__(self, key, value):
-        # step = self.view.step if self.view.step is not None else 1
-        # start = self.view.start if self.view.start is not None else 0
         if isinstance(key, (list, tuple, set)):
             # lose the reference
             pass
@@ -233,8 +257,6 @@ class ILoc:
             #################
             if isinstance(data_items[0], int) and isinstance(data_items[1], int):
                 # eg [1, 0]
-                print(data_items)
-                print("shape", shape)
                 data[data_items[0] + step * data_items[1]] = value
             ##################
             # Returns a Series
@@ -353,7 +375,6 @@ class ILoc:
         columns = self.obj.columns
         step = self.obj.step
         view = self.obj.view
-        shape = self.obj.shape
 
         # tuples are packages indices
         if isinstance(items, tuple):
@@ -415,7 +436,7 @@ class ILoc:
                 data = [data[data_items[0] + step * i] for i in data_items[1]]
                 # returns a copy of the data, so index starts at zero
                 view = slice(0, len(items[1]))
-            if isinstance(items[0], (list, set, tuple)) and isinstance(items[1], int):
+            if isinstance(items[0], self.ITERABLE_1D) and isinstance(items[1], int):
                 # eg .iloc[[1, 2, 3], 0]
                 name = columns[items[1]]
                 index = tuple(index[i] for i in items[0])
@@ -549,34 +570,44 @@ class Loc:
         return self.obj.iloc[items]
 
     def __setitem__(self, items, value, what=None):
-        items = self.items_to_iloc(items)
-        self.obj.iloc.__setitem__(items, value)
+
+        iloc_items = self.items_to_iloc(items)
+        # if the index isn't found, add an empty row/column and call it again
+        if iloc_items[0] is None:
+            # adding a row will break the view. Make a copy.
+            self.obj.drop()
+            self.obj.add_empty_series(items[0], axis=0)
+            self.__setitem__(items, value)
+        elif len(items) > 1 and iloc_items[1] is None:
+            self.obj.add_empty_series(items[1], axis=1)
+            self.__setitem__(items, value)
+        else:
+            self.obj.iloc.__setitem__(iloc_items, value)
 
     def items_to_iloc(self, items):
         index = self.obj.index
         columns = self.obj.columns
         # tuples are packages indices
         if isinstance(items, tuple):
-            n_indexers = len(items)
             items = list(items)
         else:
-            n_indexers = 1
             items = [items]
-        if n_indexers == 1:
-            print("loc not supported for 1 item yet")
-        if n_indexers == 2:
-            for i, (item, names) in enumerate(zip(list(items), [index, columns])):
-                if isinstance(item, self.ITERABLE_1D):
-                    # bypass for boolean
-                    if isinstance(item[0], bool):
-                        continue
-                    items[i] = [names.index(i) for i in item]
-                elif isinstance(item, slice):
-                    start = None if item.start is None else names.index(item.start)
-                    stop = None if item.stop is None else names.index(item.stop)
-                    items[i] = slice(start, stop)
-                else:
+
+        for i, (item, names) in enumerate(zip(list(items), [index, columns])):
+            if isinstance(item, self.ITERABLE_1D):
+                # bypass for boolean
+                if isinstance(item[0], bool):
+                    continue
+                items[i] = [names.index(i) for i in item]
+            elif isinstance(item, slice):
+                start = None if item.start is None else names.index(item.start)
+                stop = None if item.stop is None else names.index(item.stop)
+                items[i] = slice(start, stop)
+            else:
+                try:
                     items[i] = names.index(item)
+                except:
+                    items[i] = None
         return tuple(items)
 
 
@@ -661,18 +692,16 @@ class DataFrame:
         return self.loc[:, cols]
 
     def __setitem__(self, key, value):
-        # in the future, will call iloc __setitem__
-        if isinstance(value, (list, set, tuple)):
-            # check if our view is the whole dataframe. If not, make a copy
-            if (
-                self.shape[0] != self.step
-                or self.shape[1] != len(self.data) / self.step
-            ):
-                self.drop()
-            self.data.extend(value)
-            self.columns = self.columns + (key,)
-            self.shape = (self.shape[0], self.shape[1] + 1)
-            self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
+        """
+        This implementation just adds a new columns
+        :param key:
+        :param value:
+        :return:
+        """
+        # if it is a single item, call .loc[:, key]
+        # if is a slice, call .loc[key, :]
+        # if its an iterable call .loc[:, key]
+        pass
 
     def __delitem__(self, cols):
         self.drop(cols)
@@ -841,7 +870,7 @@ class DataFrame:
 
     def bound_iterable_to_df(self, raw_iter, axis):
         """
-        Converts indeces to the actual data indicies
+        Converts indicies to the actual data indicies
         :param raw_iter:
         :param axis:
         :return:
@@ -875,6 +904,31 @@ class DataFrame:
         else:
             stop = raw_slice.stop
         return slice(start, stop)
+
+    def is_view(self):
+        return self.shape[0] != self.step or self.shape[1] != len(self.data) / self.step
+
+    def add_empty_series(self, name, axis=0):
+        # if we are adding a row
+        # cannot add to a view
+        if self.is_view():
+            self.drop()
+        if axis == 0:
+            self.index = self.index + (name,)
+            ndata = []
+            for i in range(self.shape[1]):
+                ndata.extend(self.data[i * self.step : (i + 1) * self.step] + [nan])
+                print(i, ndata)
+            self.data = ndata
+            self.shape = (self.shape[0] + 1, self.shape[1])
+            self.view = (slice(self.view[0].start, self.view[0].stop + 1), self.view[1])
+            self.step = self.step + 1
+        if axis == 1:
+            self.columns = self.columns + (name,)
+            self.data = self.data + [nan] * self.shape[0]
+            self.shape = (self.shape[0], self.shape[1] + 1)
+            self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
+        # if we are adding a column
 
 
 def clean_slices(phase, info):
