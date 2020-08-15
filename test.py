@@ -2,20 +2,30 @@ import pam
 
 import pandas as pam
 
-long_df = pam.DataFrame(
-    {"one": [1, 7, 20], "two": [2, 0, 30], "three": [6, 5, 4]}, index=[10, 20, 30]
-)
-a = long_df["one"]
-a.loc[0] = "one2"
-# print(long_df["one"] < 5)
-# print(long_df[[True, False, False]])
+# ser = pam.Series([0, 1, 2, 3, 4], index=["zero", "two", "three", "four"])
+# print(ser.iloc[[True, True, False, False, True]].values)
 
-# long_df[[True, False, False]] = 199
+df = pam.DataFrame({"one": [0, 1, 2], "two": [1, 2, 3]})
+df.iloc[0:2, 0:2] = [[13, 11], [10, 11]]
+print(df.iloc[0:2, 0:2].values)
+print(df)
+# a = ser.iloc[1:-1]
+# print(a.view)
+# print(ser.view)
+# a = long_df["one"]
+# a.loc[0] = "one2"
 # print(long_df)
-# print(long_df["one"] < 5)
-# long_df["one"][long_df["one"] < 5] = 199
-long_df.loc[[True, False, False], ["one", "three"]] = 99
-print(long_df)
+# print(a.data)
+# print(a.iloc[0:10].values)
+# # print(long_df["one"] < 5)
+# # print(long_df[[True, False, False]])
+#
+# # long_df[[True, False, False]] = 199
+# # print(long_df)
+# # print(long_df["one"] < 5)
+# # long_df["one"][long_df["one"] < 5] = 199
+# long_df.loc[[True, False, True], ["one", "three"]] = [[101, 102], [103, 104]]
+# print(long_df)
 
 # ong_df[long_df < 5]
 # print(a)

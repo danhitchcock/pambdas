@@ -1,4 +1,5 @@
 import pam
+import pytest
 
 
 def test_init_series():
@@ -15,7 +16,6 @@ def test_init_series():
 def test_series_drop():
     a = pam.Series([0, 1, 2, 3])
     a.drop(2)
-    print(a)
 
 
 def test_init_dataframe():
@@ -99,6 +99,21 @@ def test_bound_methods():
     assert df.bound_iterable_to_df([0, 1, -1], axis=1) == [1, 2, 3]
 
 
+def test_bound_ser():
+    a = pam.Series([0, 1, 2, 3])
+
+    assert a.bound_slice(slice(0, 3)) == slice(0, 3, 1)
+    assert a.bound_slice(slice(1, 100)) == slice(1, 4, 1)
+    assert a.bound_slice(slice(1, -1)) == slice(1, 3, 1)
+    assert a.bound_slice(slice(-3, -1)) == slice(1, 3, 1)
+    df = pam.DataFrame([[99, 98, 97, 97], [0, 1, 2, 3]])
+    a = df.iloc[1, :]
+    assert a.bound_slice(slice(0, 3)) == slice(1, 7, 2)
+    assert a.bound_slice(slice(1, 100)) == slice(3, 9, 2)
+    assert a.bound_slice(slice(1, -1)) == slice(3, 7, 2)
+    assert a.bound_slice(slice(-3, -1)) == slice(3, 7, 2)
+
+
 def test_convert_slice():
     df = pam.DataFrame(
         {
@@ -131,6 +146,117 @@ def test_convert_slice():
     assert df.convert_slice(slice(1, None), axis=0) == slice(1, 3)
     assert df.convert_slice(slice(1, -1), axis=0) == slice(1, 2)
     assert df.convert_slice(slice(1, 2), axis=0) == slice(1, 2)
+
+
+def test_ser_getitem():
+    # Test iloc
+
+    ## test from series
+    ser = pam.Series([0, 1, 2, 3, 4], index=["zero", "one", "two", "three", "four"])
+    #### test integer
+    assert ser.iloc[0] == 0
+    assert ser.iloc[4] == 4
+    with pytest.raises(IndexError):
+        assert ser.iloc[6] == 100
+    #### test slice
+    assert ser.iloc[:].values == [0, 1, 2, 3, 4]
+    assert ser.iloc[:3].values == [0, 1, 2]
+    assert ser.iloc[:10].values == [0, 1, 2, 3, 4]
+
+    #### test iterable
+    assert ser.iloc[[0, 1, 2]].values == [0, 1, 2]
+
+    #### test bool
+    assert ser.iloc[[True, True, False, False, True]].values == [0, 1, 4]
+    assert ser.iloc[pam.Series([True, True, False, False, True])].values == [0, 1, 4]
+
+    # test from series view of a dataframe
+    df = pam.DataFrame(
+        [[11, 12, 13, 14, 15], [0, 1, 2, 3, 4]],
+        columns=["zero", "one", "two", "three", "four"],
+    )
+    ser = df.iloc[1, :]
+    #### test integer
+    assert ser.iloc[0] == 0
+    assert ser.iloc[4] == 4
+    with pytest.raises(IndexError):
+        assert ser.iloc[6] == 100
+    #### test slice
+    assert ser.iloc[:].values == [0, 1, 2, 3, 4]
+    assert ser.iloc[:3].values == [0, 1, 2]
+    assert ser.iloc[:10].values == [0, 1, 2, 3, 4]
+
+    #### test iterable
+    assert ser.iloc[[0, 1, 2]].values == [0, 1, 2]
+
+    #### test bool
+    assert ser.iloc[[True, True, False, False, True]].values == [0, 1, 4]
+    assert ser.iloc[pam.Series([True, True, False, False, True])].values == [0, 1, 4]
+
+
+def test_ser_setitem():
+    # Test iloc
+
+    ## test from series
+    ser = pam.Series([0, 1, 2, 3, 4], index=["zero", "one", "two", "three", "four"])
+    #### test integer
+    ser.iloc[0] = 9
+    assert ser.values == [9, 1, 2, 3, 4]
+    ser.iloc[4] = 99
+    assert ser.values == [9, 1, 2, 3, 99]
+    with pytest.raises(IndexError):
+        ser.iloc[6] = 100
+    #### test slice
+
+    ser.iloc[:] = [10, 11, 12, 13, 14]
+    assert ser.values == [10, 11, 12, 13, 14]
+    ser.iloc[:3] = 3
+    assert ser.values == [3, 3, 3, 13, 14]
+    ser.iloc[:5] = [99, 99, 99, 99, 99]
+    assert ser.values == [99, 99, 99, 99, 99]
+
+    #### test iterable
+    ser.iloc[[0, 1, 3]] = 100
+    assert ser.values == [100, 100, 99, 100, 99]
+
+    #### test bool
+    ser.iloc[[True, True, False, False, True]] = [0, 1, 4]
+    assert ser.values == [0, 1, 99, 100, 4]
+    ser.iloc[pam.Series([True, True, False, False, True])] = [10, 11, 14]
+    assert ser.values == [10, 11, 99, 100, 14]
+
+    # test from series view of a dataframe
+    ## test from series
+    df = pam.DataFrame(
+        [[11, 12, 13, 14, 15], [0, 1, 2, 3, 4]],
+        columns=["zero", "one", "two", "three", "four"],
+    )
+    ser = df.iloc[1, :]
+    #### test integer
+    ser.iloc[0] = 9
+    assert ser.values == [9, 1, 2, 3, 4]
+    ser.iloc[4] = 99
+    assert ser.values == [9, 1, 2, 3, 99]
+    with pytest.raises(IndexError):
+        ser.iloc[6] = 100
+    #### test slice
+
+    ser.iloc[:] = [10, 11, 12, 13, 14]
+    assert ser.values == [10, 11, 12, 13, 14]
+    ser.iloc[:3] = 3
+    assert ser.values == [3, 3, 3, 13, 14]
+    ser.iloc[:5] = [99, 99, 99, 99, 99]
+    assert ser.values == [99, 99, 99, 99, 99]
+
+    #### test iterable
+    ser.iloc[[0, 1, 3]] = 100
+    assert ser.values == [100, 100, 99, 100, 99]
+
+    #### test bool
+    ser.iloc[[True, True, False, False, True]] = [0, 1, 4]
+    assert ser.values == [0, 1, 99, 100, 4]
+    ser.iloc[pam.Series([True, True, False, False, True])] = [10, 11, 14]
+    assert ser.values == [10, 11, 99, 100, 14]
 
 
 def test_df_getitem():
@@ -286,9 +412,11 @@ def test_df_setitem():
     df.iloc[:, 0] = 100
     assert df.iloc[:, 0].values == [100, 100, 100]
     df.iloc[0, :] = 99
-    assert df.iloc[0, :] == [99, 99]
+    assert df.iloc[0, :].values == [99, 99]
     df.iloc[[0, 1, 2], 1] = 9
-    assert df.iloc[0, :] == [9, 9, 9]
+    assert df.iloc[0, :].values == [99, 9]
+    df.iloc[0:2, 0:2] = [[10, 11], [10, 11]]
+    assert df.iloc[0:2, 0:2].values == [[10, 11], [10, 11]]
 
     # test on view dataframe
     df = pam.DataFrame(
@@ -324,3 +452,9 @@ def test_df_setitem_create():
     df = long_df.iloc[1:-1, 1:-1]
     df.loc[:, "dne"] = [99, 99, 99]
     df.loc["dne", :] = 100
+
+
+def test_ser_setitem_create():
+    ser = pam.Series([0, 1, 2, 3, 4])
+    ser.loc["dne"] = 100
+    print(ser)

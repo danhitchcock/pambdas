@@ -1,6 +1,5 @@
 from copy import copy
 import itertools
-import gc
 
 
 class NaN:
@@ -68,6 +67,7 @@ class Series:
         self.index = tuple(index) if index else None
         self.name = name
         self.iloc = ILoc(self)
+        self.loc = Loc(self)
 
     def __setitem__(self, key, value):
         self.loc.__setitem__(key, value)
@@ -196,6 +196,34 @@ class Series:
     def __len__(self):
         return len(self.index)
 
+    def bound_slice(self, slc):
+        """
+        Converts a slice to the actual slice used to reference the data
+        """
+        # convert any negatives
+        start = slc.start
+        stop = slc.stop
+        if slc.start < 0:
+            start = len(self) + slc.start
+        if slc.stop < 0:
+
+            stop = len(self) + slc.stop
+        start = self.view.start + start * self.view.step
+        stop = self.view.start + stop * self.view.step
+        if start > stop:
+            raise IndexError("Start cannot be greater than start for index")
+        stop = min(self.view.stop, stop)
+        return slice(start, stop, self.view.step)
+
+    def bound_int(self, idx):
+        if idx < 0:
+            idx = len(self) + idx
+        idx = self.view.start + idx * self.view.step
+        return idx
+
+    def bound_iterable(self, iterable):
+        return [self.bound_int(item) for item in iterable]
+
 
 class ILoc:
     ITERABLE_1D = (list, set, tuple, Series)
@@ -296,8 +324,6 @@ class ILoc:
 
         if isinstance(data_items[0], slice) and isinstance(data_items[1], slice):
             # e.g. .iloc[1:3, :]
-            if not isinstance(value, self.ITERABLE_1D):
-                pass
             # there is almost certainly a better way to do this
             k = 0
             if isinstance(value, self.ITERABLE_1D):
@@ -365,7 +391,6 @@ class ILoc:
         columns = self.obj.columns
         step = self.obj.step
         view = self.obj.view
-        print("The series: ", items)
         # if it's a tuple, its multiple indicies. Otherwise, make a dummy index
         if isinstance(items, tuple):
             items = list(items)
@@ -385,6 +410,7 @@ class ILoc:
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
+
         #################
         # Returns an item
         #################
@@ -488,48 +514,55 @@ class ILoc:
             return DataFrame.from_data(data, index, name, view, step)
 
     def setitem_ser(self, item, value):
-        if isinstance(item, slice):
-            # eg .iloc[1:3]
+        # if there are multiple args, just take the first item
+        if isinstance(item, tuple):
+            item = item[0]
+
+        # convert to bool, or bound
+        if isinstance(item, self.ITERABLE_1D):
+            # if it's a boolean
+            if is_bool(item):
+                item = [i for i, val in enumerate(item) if val]
+            data_item = self.obj.bound_iterable(item)
+            if not isinstance(value, self.ITERABLE_1D + (self.__class__,)):
+                value = [value] * len(self.obj)
+
+            for i, val in zip(data_item, value):
+
+                self.obj.data[i] = val
+
+        elif isinstance(item, slice):
             item = slice(
                 item.start if item.start is not None else 0,
-                item.stop if item.stop is not None else self.obj.view.stop,
+                item.stop if item.stop is not None else len(self.obj),
             )
-            data = self.obj.data
-            step = self.obj.view.step
-            start = self.obj.view.start + item.start * step
-            stop = self.obj.view.start + item.stop * step
+            data_item = self.obj.bound_slice(item)
             if not isinstance(value, self.ITERABLE_1D + (self.__class__,)):
-                value = [value] * len(self.obj)
-            for i, val in zip(range(start, stop, step), value):
-                data[i] = val
+                value = [value] * ((data_item.stop - data_item.start) // data_item.step)
 
-        elif isinstance(item, self.ITERABLE_1D):
-            data = self.obj.data
-            step = self.obj.view.step if self.obj.view.step is not None else 1
-            start = self.obj.view.start
-            if not isinstance(value, self.ITERABLE_1D + (self.__class__,)):
-                value = [value] * len(self.obj)
-            for i, val in zip(item, value):
-                data[start + i * step] = val
+            self.obj.data[data_item] = value
 
         else:
-            self.obj.data[self.obj.view.start + item * self.obj.view.step] = value
+            data_item = self.obj.bound_int(item)
+            self.obj.data[data_item] = value
 
     def getitem_ser(self, item):
+        if isinstance(item, tuple):
+            item = item[0]
+
         if isinstance(item, slice):
             item = slice(
                 item.start if item.start is not None else 0,
-                item.stop if item.stop is not None else self.obj.view.stop,
+                item.stop if item.stop is not None else len(self.obj),
             )
+            view = self.obj.bound_slice(item)
             index = self.obj.index[item]
-            view = slice(
-                self.obj.view.start + item.start * self.obj.view.step,
-                self.obj.view.start + item.stop * self.obj.view.step,
-                self.obj.view.step,
-            )
             return self.obj.from_data(self.obj.data, index, self.obj.name, view)
 
-        if isinstance(item, self.ITERABLE_1D):
+        if isinstance(item, self.ITERABLE_1D + (self.obj.__class__,)):
+            if is_bool(item):
+                item = [i for i, val in enumerate(item) if val]
+
             index = self.obj.index
             index = [index[i] for i in item]
             data = self.obj.values
@@ -865,7 +898,6 @@ class DataFrame:
         :param axis:
         :return:
         """
-        print("raw iter", raw_iter)
         return [self.bound_int_to_df(item, axis) for item in raw_iter]
 
     def convert_slice(self, raw_slice, axis):
@@ -942,58 +974,59 @@ class DataFrame:
 
 
 def is_bool(key):
-    try:
-        if isinstance(key[0], bool) or (
-            isinstance(key, Series) and isinstance(key.iloc[0], bool)
-        ):
-            return True
-        return False
-    except:
-        return False
+    if isinstance(key, Series):
+        item0 = key.iloc[0]
+    elif isinstance(key, (list, tuple, set)):
+        item0 = key[0]
+    else:
+        item0 = key
+    if isinstance(item0, bool):
+        return True
+    return False
 
 
-def clean_slices(phase, info):
-    if phase == "stop":
-        return
-    obj_dict = {}
-    data_dict = {}
-    for obj in gc.get_objects():
-        if isinstance(obj, (Series, DataFrame)):
-            d_id = id(obj.data)
-            data_dict[d_id] = obj.data
-            try:
-                obj_dict[d_id].append(obj)
-            except:
-                obj_dict[d_id] = [obj]
-
-    # check if the series is part of a dataframe. if so, skip it.
-
-    for d_id, objs in obj_dict.items():
-        # find minimum start or maximum stop
-        start = objs[0].view.start
-        stop = objs[0].view.stop
-        for obj in objs[1:]:
-            # early stopping if both are None. Data is still in use somewhere
-            if start is None and stop is None:
-                break
-            if (start is not None) and (
-                (obj.view.start is None) or obj.view.start < start
-            ):
-                start = obj.view.start
-            if stop is not None and ((obj.view.stop is None) or obj.view.stop > stop):
-                stop = obj.view.stop
-        # if both are None, don't do anything. No trimming necessary
-        if start is None and stop is None:
-            continue
-        if start is None:
-            start = 0
-        # adjust the data and view for each by trimming data and subtracting the start
-        data_dict[d_id][:] = data_dict[d_id][start:stop]
-        for obj in objs:
-            new_start = new_stop = None
-            if obj.view.start is not None:
-                new_start = obj.view.start - start
-            if obj.view.stop is not None:
-                new_stop = obj.view.stop - start
-            obj.view = slice(new_start, new_stop)
-            obj.index[:] = obj.index[start:stop]
+# def clean_slices(phase, info):
+#     if phase == "stop":
+#         return
+#     obj_dict = {}
+#     data_dict = {}
+#     for obj in gc.get_objects():
+#         if isinstance(obj, (Series, DataFrame)):
+#             d_id = id(obj.data)
+#             data_dict[d_id] = obj.data
+#             try:
+#                 obj_dict[d_id].append(obj)
+#             except:
+#                 obj_dict[d_id] = [obj]
+#
+#     # check if the series is part of a dataframe. if so, skip it.
+#
+#     for d_id, objs in obj_dict.items():
+#         # find minimum start or maximum stop
+#         start = objs[0].view.start
+#         stop = objs[0].view.stop
+#         for obj in objs[1:]:
+#             # early stopping if both are None. Data is still in use somewhere
+#             if start is None and stop is None:
+#                 break
+#             if (start is not None) and (
+#                 (obj.view.start is None) or obj.view.start < start
+#             ):
+#                 start = obj.view.start
+#             if stop is not None and ((obj.view.stop is None) or obj.view.stop > stop):
+#                 stop = obj.view.stop
+#         # if both are None, don't do anything. No trimming necessary
+#         if start is None and stop is None:
+#             continue
+#         if start is None:
+#             start = 0
+#         # adjust the data and view for each by trimming data and subtracting the start
+#         data_dict[d_id][:] = data_dict[d_id][start:stop]
+#         for obj in objs:
+#             new_start = new_stop = None
+#             if obj.view.start is not None:
+#                 new_start = obj.view.start - start
+#             if obj.view.stop is not None:
+#                 new_stop = obj.view.stop - start
+#             obj.view = slice(new_start, new_stop)
+#             obj.index[:] = obj.index[start:stop]
