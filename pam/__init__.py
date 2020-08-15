@@ -70,7 +70,7 @@ class Series:
         self.iloc = ILoc(self)
 
     def __setitem__(self, key, value):
-        self.loc.__setitem__(keym, value)
+        self.loc.__setitem__(key, value)
 
     def __getitem__(self, item):
         self.loc.__getitem__(item)
@@ -233,11 +233,11 @@ class ILoc:
             if isinstance(item, self.ITERABLE_1D):
                 # if it's a boolean
                 if is_bool(item):
-                    items[i] = [i for i in range(len(item)) if item[i]]
-                data_items[i] = self.obj.bound_iterable_to_df(item, axis=i)
+                    items[i] = [i for i, val in enumerate(item) if val]
+                data_items[i] = self.obj.bound_iterable_to_df(items[i], axis=i)
             elif isinstance(item, slice):
                 items[i] = self.obj.convert_slice(item, axis=i)
-                data_items[i] = self.obj.bound_slice_to_df(item, axis=i)
+                data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
         del items
@@ -385,8 +385,6 @@ class ILoc:
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
-        print("items", items)
-        print("converted", data_items)
         #################
         # Returns an item
         #################
@@ -690,7 +688,7 @@ class DataFrame:
         # if its an iterable call .loc[:, key]
         if isinstance(key, tuple):
             self.loc[key] = value
-        elif isinstance(key, slice):
+        elif isinstance(key, slice) or is_bool(key):
             self.loc[key, :] = value
         else:
             self.loc[:, key] = value
