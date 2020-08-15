@@ -1,16 +1,23 @@
-import pam as pam
+import pam
+
+# import pandas as pam
 
 long_df = pam.DataFrame(
     {"one": [1, 7, 20], "two": [2, 0, 30], "three": [6, 5, 4]}, index=[10, 20, 30]
 )
 a = long_df["one"]
 a.loc[0] = "one2"
-# a.loc[[40, 50]] = 30
+# print(long_df["one"] < 5)
+print(long_df[[True, False, False]])
+# print(long_df["one"] < 5)
+# print(long_df[long_df["one"] < 5])
 
-print(a)
-a.loc[10:30] = [100]
-a.loc[[10, 20]] = [300, 400]
-print(a)
+# ong_df[long_df < 5]
+# print(a)
+# print(long_df)
+# # a.loc[10:30] = 100
+# print(a.loc[10:20])
+# print(a)
 # a[[10, 20]] = 9
 # print(a)
 # # a.loc[10:30] = 99

@@ -98,7 +98,7 @@ class Series:
 
         if isinstance(item, self.ITERABLE_1D + (self.__class__,)):
             # bypass for boolean
-            if isinstance(item[0], bool):
+            if is_bool(item):
                 return item
             return [names.index(i) for i in item]
         elif isinstance(item, slice):
@@ -232,7 +232,7 @@ class ILoc:
         for i, item in enumerate(items):
             if isinstance(item, self.ITERABLE_1D):
                 # if it's a boolean
-                if item[0] is True or item[0] is False:
+                if is_bool(item):
                     items[i] = [i for i in range(len(item)) if item[i]]
                 data_items[i] = self.obj.bound_iterable_to_df(item, axis=i)
             elif isinstance(item, slice):
@@ -365,7 +365,7 @@ class ILoc:
         columns = self.obj.columns
         step = self.obj.step
         view = self.obj.view
-
+        print("The series: ", items)
         # if it's a tuple, its multiple indicies. Otherwise, make a dummy index
         if isinstance(items, tuple):
             items = list(items)
@@ -377,16 +377,16 @@ class ILoc:
         for i, item in enumerate(items):
             if isinstance(item, self.ITERABLE_1D):
                 # if it's a boolean
-                if item[0] is True or item[0] is False:
-                    items[i] = [i for i in range(len(item)) if item[i]]
-                data_items[i] = self.obj.bound_iterable_to_df(item, axis=i)
+                if is_bool(item):
+                    items[i] = [i for i, val in enumerate(item) if val]
+                data_items[i] = self.obj.bound_iterable_to_df(items[i], axis=i)
             elif isinstance(item, slice):
                 items[i] = self.obj.convert_slice(item, axis=i)
-                data_items[i] = self.obj.bound_slice_to_df(item, axis=i)
+                data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
-        # convert boolean to lists
-
+        print("items", items)
+        print("converted", data_items)
         #################
         # Returns an item
         #################
@@ -551,11 +551,12 @@ class Loc:
 
     def __getitem__(self, items):
         if isinstance(items, tuple):
+            # items arrive as slice and series
             iloc_items = tuple(
                 self.obj.index_of(item, axis=i) for (i, item) in enumerate(items)
             )
         else:
-            iloc_items = (self.obj.index_of(items),)
+            iloc_items = self.obj.index_of(items)
         return self.obj.iloc[iloc_items]
 
     def __setitem__(self, items, value, what=None):
@@ -669,8 +670,13 @@ class DataFrame:
         return string
 
     def __getitem__(self, cols):
-
-        return self.loc[:, cols]
+        # gets here as slice and series
+        if isinstance(cols, tuple):
+            return self.loc[cols]
+        elif isinstance(cols, slice) or is_bool(cols):
+            return self.loc[cols, :]
+        else:
+            return self.loc[:, cols]
 
     def __setitem__(self, key, value):
         """
@@ -861,6 +867,7 @@ class DataFrame:
         :param axis:
         :return:
         """
+        print("raw iter", raw_iter)
         return [self.bound_int_to_df(item, axis) for item in raw_iter]
 
     def convert_slice(self, raw_slice, axis):
@@ -899,10 +906,9 @@ class DataFrame:
             names = self.index
         else:
             names = self.columns
-
         if isinstance(item, self.ITERABLE_1D):
             # bypass for boolean
-            if isinstance(item[0], bool):
+            if is_bool(item):
                 return item
             return [names.index(i) for i in item]
         elif isinstance(item, slice):
@@ -935,6 +941,17 @@ class DataFrame:
             self.shape = (self.shape[0], self.shape[1] + 1)
             self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
         # if we are adding a column
+
+
+def is_bool(key):
+    try:
+        if isinstance(key[0], bool) or (
+            isinstance(key, Series) and isinstance(key.iloc[0], bool)
+        ):
+            return True
+        return False
+    except:
+        return False
 
 
 def clean_slices(phase, info):
