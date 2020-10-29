@@ -20,7 +20,7 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Setup tipbot module
+      - name: Setup pambdas module
         shell: bash -l {0}
         run: |
           make module-setup
