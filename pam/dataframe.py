@@ -101,7 +101,7 @@ class DataFrame:
         # if it is a single item, call .loc[:, key]
         # if is a slice, call .loc[key, :]
         # if its an iterable call .loc[:, key]
-        if isinstance(key, tuple):
+        if isinstance(key, (tuple, self.__class__)):
             self.loc[key] = value
         elif isinstance(key, slice) or is_bool(key):
             self.loc[key, :] = value

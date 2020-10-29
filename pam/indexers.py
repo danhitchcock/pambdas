@@ -35,6 +35,7 @@ class ILocDF:
                 if is_bool(item):
                     items[i] = [i for i, val in enumerate(item) if val]
                 data_items[i] = self.obj.bound_iterable_to_df(items[i], axis=i)
+
             elif isinstance(item, slice):
                 items[i] = self.obj.convert_slice(item, axis=i)
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
@@ -159,6 +160,7 @@ class ILocDF:
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
+
         del items
 
         #################
@@ -277,6 +279,21 @@ class ILocDF:
                 for j in data_items[1]:
                     data[i + j * step] = value[k]
                     k += 1
+
+        # handle a 2d boolean key
+        if isinstance(data_items[0], self.obj.__class__):
+            try:
+                data_items[0] = data_items[0].values
+            except:
+                pass
+
+            for i, row in enumerate(data_items[0]):
+                for j, col in enumerate(row):
+                    if col:
+                        self.obj.data[
+                            self.obj.bound_int_to_df(i, axis=0)
+                            + self.obj.bound_int_to_df(j, axis=1) * self.obj.step
+                        ] = value
 
 
 class ILocSer:
@@ -410,6 +427,11 @@ class LocDF(Loc):
         super().__init__(obj)
 
     def __setitem__(self, items, value, what=None):
+        # if it's a dataframe, send straight to iloc. It's a boolean key
+        if isinstance(items, self.obj.__class__):
+            self.obj.iloc.__setitem__(items, value)
+            return
+
         if isinstance(items, tuple):
             iloc_items = tuple(
                 self.obj.index_of(item, axis=i) for (i, item) in enumerate(items)

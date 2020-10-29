@@ -25,6 +25,11 @@ nan = NaN()
 
 
 def is_bool(key):
+    """
+    Checks if the first value in some kind of item is a boolean value
+    :param key:
+    :return:
+    """
     try:
         item0 = key.iloc[0]
     except AttributeError:
