@@ -11,7 +11,7 @@ class DataFrame:
     If a row is added, data is recreated and step is also updated.
     If a column is added, data is appended *only* if the dataframe view covers
     the entire dataset (shape equals len index, columns). Otherwise, a copy is made
-    view is a tuple of two slices, for the row and column. Steps are not taken into
+    View is a tuple of two slices, for the row and column. Steps are not taken into
     account in view, it is high level. This is contrary to Series
     step = len(index) = shape(0) = view[0].stop - view[0].start
     len(columns) = shape(1) = view[1].stop - view[1].start
@@ -20,11 +20,17 @@ class DataFrame:
     ITERABLE_1D = (list, set, tuple, Series)
 
     def __init__(self, data=None, index=None, columns=None):
+        self.columns = tuple(columns) if columns else tuple()  # type: tuple
+        self.index = tuple(index) if index else tuple()  # type: tuple
+        self.data = []  # type: list
+        self.step = 0  # type: int
+        self.shape = (0, 0)  # type: tuple
+        self.view = (slice(0, 0), slice(0, 0))  # type: tuple
+        self.iloc = ILocDF(self)  # type: ILocDF
+        self.loc = LocDF(self)  # type: LocDF
+
         if data is None:
             return
-        self.columns = columns
-        self.index = index
-        self.data = []
         if isinstance(data, dict):
             self.step = len(data[list(data.keys())[0]])
             self.data = list(itertools.chain(*data.values()))
@@ -36,28 +42,19 @@ class DataFrame:
                 for item in data:
                     self.data.extend(item)
             elif isinstance(data[0], dict):
-                self.columns = []
                 for d_dict in data:
                     key, val = next(iter(d_dict.items()))
-                    self.columns.append(key)
+                    self.columns = self.columns + (key,)
                     self.data.extend(val)
                 self.step = len(val)
 
-        if self.columns is None:
+        if len(self.columns) == 0:
             self.columns = tuple(i for i in range(len(self.data) // self.step))
-        else:
-            self.columns = tuple(self.columns)
-        if self.index is None:
+
+        if len(self.index) == 0:
             self.index = tuple(i for i in range(self.step))
-        else:
-            self.index = tuple(index)
         self.shape = (self.step, len(self.columns))
-        self.view = (
-            slice(0, self.shape[0]),
-            slice(0, self.shape[1]),
-        )
-        self.iloc = ILocDF(self)
-        self.loc = LocDF(self)
+        self.view = (slice(0, self.shape[0]), slice(0, self.shape[1]))
 
     @classmethod
     def from_data(cls, data, index, columns, view, step):
@@ -216,7 +213,13 @@ class DataFrame:
 
     def bound_int_to_df(self, raw_int, axis):
         """
-        Transforms an index int to the actual axis index of data
+        Transforms an index int to the actual axis index of data, taking bounds into account
+        e.g.
+        [0,| 1, 2, 3, 4, 5, | 6]
+        If `2` is given, it should access "3", thus index 2 is actually 3.
+        -1 becomes 5
+        6 would be an index error
+        Slices are handled by a bound_slice_to_df
 
         :param raw_int:
         :param axis:
@@ -274,10 +277,7 @@ class DataFrame:
                 stop = view_start + raw_slice.stop
         else:
             stop = view_stop
-        return slice(
-            start,
-            stop,
-        )
+        return slice(start, stop)
 
     def bound_iterable_to_df(self, raw_iter, axis):
         """
