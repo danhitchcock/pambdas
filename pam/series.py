@@ -172,21 +172,24 @@ class Series:
 
     def bound_slice(self, slc):
         """
-        Converts a slice to the actual slice used to reference the data
+        Converts a slice to the actual slice used to reference the data. Does not raise bounds error.
         """
-        # convert any negatives
         start = slc.start
         stop = slc.stop
-        if slc.start < 0:
-            start = len(self) + slc.start
-        if slc.stop < 0:
 
-            stop = len(self) + slc.stop
-        start = self.view.start + start * self.view.step
-        stop = self.view.start + stop * self.view.step
-        if start > stop:
-            raise IndexError("Start cannot be greater than start for index")
-        stop = min(self.view.stop, stop)
+        if start is None:
+            start = 0
+        if stop is None:
+            stop = len(self)
+        if start < 0:
+            start = max(self.view.stop + start * self.view.step, self.view.start)
+        else:
+            start = min(self.view.start + start * self.view.step, self.view.stop)
+        if stop < 0:
+            stop = max(self.view.stop + stop * self.view.step, self.view.start)
+        else:
+            stop = min(self.view.start + stop * self.view.step, self.view.stop)
+
         return slice(start, stop, self.view.step)
 
     def bound_int(self, idx):

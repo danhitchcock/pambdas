@@ -58,6 +58,7 @@ class ILocDF:
             view = slice(
                 data_items[0].start + data_items[1] * step,
                 data_items[0].stop + data_items[1] * step,
+                1,
             )
         elif isinstance(items[0], int) and isinstance(items[1], slice):
             # eg .iloc[0, 1:3]
@@ -129,7 +130,7 @@ class ILocDF:
             step = len(index)
             # return a copy, view starts at zero
             view = (slice(0, step), slice(0, len(name)))
-        print("index, name: ", index, name, type(index), type(name))
+
         if isinstance(index, tuple) and isinstance(name, (str, int)):
             return self.obj.series_from_data(data, index, name, view)
         if isinstance(index, tuple) and isinstance(name, tuple):
@@ -216,6 +217,8 @@ class ILocDF:
             # e.g. .iloc[1:3, :]
             # there is almost certainly a better way to do this
             k = 0
+
+            # convert the value to a flat list for assignment
             if isinstance(value, self.obj.ITERABLE_1D):
                 value = list(itertools.chain.from_iterable(value))
             else:
