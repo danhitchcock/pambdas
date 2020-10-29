@@ -58,6 +58,7 @@ class ILocDF:
             view = slice(
                 data_items[0].start + data_items[1] * step,
                 data_items[0].stop + data_items[1] * step,
+                1,
             )
         elif isinstance(items[0], int) and isinstance(items[1], slice):
             # eg .iloc[0, 1:3]
@@ -216,10 +217,6 @@ class ILocDF:
             # e.g. .iloc[1:3, :]
             # there is almost certainly a better way to do this
             k = 0
-            # print("before", data_items)
-            # data_items[0] = self.obj.bound_slice_to_df(data_items[0], axis=0)
-            # data_items[1] = self.obj.bound_slice_to_df(data_items[1], axis=0)
-            # print("after", data_items)
 
             # convert the value to a flat list for assignment
             if isinstance(value, self.obj.ITERABLE_1D):
