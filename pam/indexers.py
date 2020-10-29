@@ -9,7 +9,9 @@ class ILocDF:
     ILoc indexer for dataframes
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj=None):
+        if obj is None:
+            return
         self.obj = obj
 
     def __getitem__(self, items):
@@ -100,16 +102,7 @@ class ILocDF:
             index = tuple(index[i] for i in items[0])
             step = len(index)
             # retuns a copy, so view starts at zero
-            view = (
-                slice(
-                    0,
-                    step,
-                ),
-                slice(
-                    0,
-                    len(name),
-                ),
-            )
+            view = (slice(0, step), slice(0, len(name)))
         elif isinstance(items[0], slice) and isinstance(items[1], self.obj.ITERABLE_1D):
             # e.g. .iloc[:, [1,2]
             ndata = []
@@ -122,16 +115,7 @@ class ILocDF:
             name = tuple(columns[i] for i in items[1])
             step = len(index)
             # return a copy, view starts at zero
-            view = (
-                slice(
-                    0,
-                    step,
-                ),
-                slice(
-                    0,
-                    len(name),
-                ),
-            )
+            view = (slice(0, step), slice(0, len(name)))
         elif isinstance(items[0], self.obj.ITERABLE_1D) and isinstance(
             items[1], self.obj.ITERABLE_1D
         ):
@@ -144,16 +128,8 @@ class ILocDF:
             name = tuple(columns[i] for i in items[1])
             step = len(index)
             # return a copy, view starts at zero
-            view = (
-                slice(
-                    0,
-                    step,
-                ),
-                slice(
-                    0,
-                    len(name),
-                ),
-            )
+            view = (slice(0, step), slice(0, len(name)))
+        print("index, name: ", index, name, type(index), type(name))
         if isinstance(index, tuple) and isinstance(name, (str, int)):
             return self.obj.series_from_data(data, index, name, view)
         if isinstance(index, tuple) and isinstance(name, tuple):
@@ -382,6 +358,9 @@ class Loc:
         self.obj = obj
 
     def __getitem__(self, items):
+        """
+        getitem is the same for both DF and Series
+        """
         if isinstance(items, tuple):
             # items arrive as slice and series
             iloc_items = tuple(
@@ -416,7 +395,9 @@ class LocSer(Loc):
 
 
 class LocDF(Loc):
-    def __init__(self, obj):
+    def __init__(self, obj=None):
+        if obj is None:
+            return
         super().__init__(obj)
 
     def __setitem__(self, items, value, what=None):
@@ -426,6 +407,7 @@ class LocDF(Loc):
             )
         else:
             iloc_items = (self.obj.index_of(items),)
+
         # if the index isn't found, add an empty row/column and call it again
         if iloc_items[0] is None:
             # adding a row will break the view. Make a copy.
