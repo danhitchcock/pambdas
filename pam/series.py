@@ -57,10 +57,7 @@ class Series:
             + "\n"
             + "\n".join(
                 "%s: %s" % (item[0], item[1])
-                for item in zip(
-                    self.index,
-                    self.data[self.view],
-                )
+                for item in zip(self.index, self.data[self.view])
             )
         )
 
@@ -193,10 +190,20 @@ class Series:
         return slice(start, stop, self.view.step)
 
     def bound_int(self, idx):
+        """
+        Converts an index to the actual index of the underlying data. Does not raise out of range errors.
+        :param idx: int, desired index.values data
+        :return: int, actual index of data
+        """
         if idx < 0:
             idx = len(self) + idx
         idx = self.view.start + idx * self.view.step
         return idx
 
     def bound_iterable(self, iterable):
+        """
+        Converts an iterable of desired indecies to actual index numbers
+        :param iterable:
+        :return: list, a lit of index of the underlying data
+        """
         return [self.bound_int(item) for item in iterable]

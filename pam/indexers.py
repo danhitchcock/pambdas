@@ -343,6 +343,12 @@ class ILocSer:
             self.obj.data[data_item] = value
 
         else:
+            # check the bounds
+            if item >= len(self.obj):
+                raise IndexError(
+                    "You requested index %s but series is only %s items."
+                    % (item, len(self.obj))
+                )
             data_item = self.obj.bound_int(item)
             self.obj.data[data_item] = value
 
