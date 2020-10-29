@@ -193,6 +193,13 @@ def test_ser_getitem():
     assert ser.iloc[[True, True, False, False, True]].values == [0, 1, 4]
     assert ser.iloc[pam.Series([True, True, False, False, True])].values == [0, 1, 4]
 
+    # test on a slice of series
+    ser = pam.Series([0, 1, 2, 3, 4], index=["zero", "one", "two", "three", "four"])
+    ser2 = ser.iloc[:-1]
+    assert ser2.iloc[0:6].values == [0, 1, 2, 3]
+    with pytest.raises(IndexError):
+        assert ser2.iloc[5] == 4
+
 
 def test_ser_setitem():
     # Test iloc
@@ -257,6 +264,12 @@ def test_ser_setitem():
     assert ser.values == [0, 1, 99, 100, 4]
     ser.iloc[pam.Series([True, True, False, False, True])] = [10, 11, 14]
     assert ser.values == [10, 11, 99, 100, 14]
+
+    # test on a slice of series
+    ser = pam.Series([0, 1, 2, 3, 4], index=["zero", "one", "two", "three", "four"])
+    ser2 = ser.iloc[:-1]
+    with pytest.raises(IndexError):
+        ser2.iloc[4] = 10
 
 
 def test_df_getitem():
