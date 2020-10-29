@@ -249,8 +249,8 @@ class DataFrame:
     def bound_slice_to_df(self, raw_slice, axis):
         """
         Transforms a slice to the actual axis view for the data
-        :param raw_slice:
-        :return:
+        :param raw_slice: relative slice
+        :return: slice to underlying data
         """
         if axis in [0, "row", "rows"]:
             view_start = self.view[0].start
@@ -263,10 +263,9 @@ class DataFrame:
 
         if raw_slice.start:
             if raw_slice.start < 0:
-                # if its negative, subtract from the end or the start
                 start = max(view_stop + raw_slice.start, view_start)
             else:
-                start = raw_slice.start + view_start
+                start = min(view_start + raw_slice.start, view_stop)
         else:
             start = view_start
 
@@ -274,7 +273,7 @@ class DataFrame:
             if raw_slice.stop < 0:
                 stop = max(view_stop + raw_slice.stop, view_start)
             else:
-                stop = view_start + raw_slice.stop
+                stop = min(view_start + raw_slice.stop, view_stop)
         else:
             stop = view_stop
         return slice(start, stop)
