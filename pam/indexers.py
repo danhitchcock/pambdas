@@ -1,7 +1,7 @@
 from copy import copy
 import itertools
 
-from .other_stuff import is_bool, is_2d_bool
+from .other_stuff import is_bool, is_2d_bool, nan, invert
 
 
 class ILocDF:
@@ -26,6 +26,14 @@ class ILocDF:
             items = list(items)
         else:
             items = [items, slice(None, None)]
+
+        if is_2d_bool(items[0]):
+            if isinstance(items[0], self.obj.__class__):
+                items[0] = items[0].values
+
+            df_cp = self.obj.copy()
+            df_cp[invert(items[0])] = nan
+            return df_cp
         data_items = copy(items)
 
         # convert to bool, or bound
@@ -391,13 +399,20 @@ class Loc:
         """
         getitem is the same for both DF and Series
         """
+
         if isinstance(items, tuple):
+
+            if is_2d_bool(items[0]):
+                return self.obj.iloc[items]
             # items arrive as slice and series
             iloc_items = tuple(
                 self.obj.index_of(item, axis=i) for (i, item) in enumerate(items)
             )
         else:
+            if is_2d_bool(items):
+                return self.obj.iloc[items]
             iloc_items = self.obj.index_of(items)
+
         return self.obj.iloc[iloc_items]
 
 

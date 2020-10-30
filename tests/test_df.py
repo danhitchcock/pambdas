@@ -1,5 +1,6 @@
 import pam
 import pytest
+from pam.other_stuff import nan
 
 
 def test_is_2d_bool():
@@ -20,6 +21,16 @@ def test_init_series():
     ser = pam.Series([1, 100, 1000, 10000], index=[10, 11, 12, 13])
     assert ser.index == (10, 11, 12, 13)
     assert ser.values == [1, 100, 1000, 10000]
+
+
+def test_invert():
+    a = [True, False, True]
+    assert pam.other_stuff.invert(a) == [False, True, False]
+    assert a == [True, False, True]
+
+    a = [[True, False, True], [False, False, True]]
+    assert pam.other_stuff.invert(a) == [[False, True, False], [True, True, False]]
+    assert a == [[True, False, True], [False, False, True]]
 
 
 def test_series_drop():
@@ -343,6 +354,12 @@ def test_ser_setitem():
         ser2.iloc[4] = 10
 
 
+def test_df_operators():
+    df = pam.DataFrame([[0, 10, 20], [1, 11, 21]])
+    assert (df > 10).values == [[False, False, True], [False, True, True]]
+    assert (~(df > 10)).values == [[True, True, False], [True, False, False]]
+
+
 def test_df_getitem():
     # tests for getting dataframes from non-view dataframes
     long_df = pam.DataFrame(
@@ -485,6 +502,36 @@ def test_df_getitem():
     assert ser.name == "one"
     assert df.iloc[0, 1] == 1
     assert all(ser == pam.Series([1, 2], index=[12, 13]))
+
+    # Test 2d Boolean arrays
+    # Test Boolean setitem
+    # DataFrame
+    exp_results = [[nan, nan, 100, 1000], [nan, nan, 200, 2000], [nan, 30, 300, 3000]]
+    input = [[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]]
+    df = pam.DataFrame(input)
+    df = df[df > 20]
+    assert df.values == exp_results
+
+    df = pam.DataFrame(input)
+    df = df.loc[df > 20]
+    assert df.values == exp_results
+
+    df = pam.DataFrame(input)
+    df = df.iloc[df > 20]
+    assert df.values == exp_results
+
+    # 2d boolean array
+    df = pam.DataFrame(input)
+    df = df[(df > 20).values]
+    assert df.values == exp_results
+
+    df = pam.DataFrame(input)
+    df = df.loc[(df > 20).values]
+    assert df.values == exp_results
+
+    df = pam.DataFrame(input)
+    df = df.iloc[(df > 20).values]
+    assert df.values == exp_results
 
 
 def test_df_setitem():
