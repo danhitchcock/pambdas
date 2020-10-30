@@ -630,6 +630,33 @@ def test_df_setitem():
     assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
 
 
+def test_df_merging():
+    a = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
+    b = pam.DataFrame({"one": [10, 20, 30], "two": [20, 30, 40]})
+    assert a.append(b).values == [[1, 2], [2, 3], [3, 4], [10, 20], [20, 30], [30, 40]]
+
+    a = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
+    b = pam.DataFrame({"one": [10, 20, 30], "two": [20, 30, 40], "three": [0, 1, 1]})
+    assert a.append(b).values == [
+        [1, 2, nan],
+        [2, 3, nan],
+        [3, 4, nan],
+        [10, 20, 0],
+        [20, 30, 1],
+        [30, 40, 1],
+    ]
+    assert b.append(a).values == [
+        [10, 20, 0],
+        [20, 30, 1],
+        [30, 40, 1],
+        [1, 2, nan],
+        [2, 3, nan],
+        [3, 4, nan],
+    ]
+
+    assert a.append(b, ignore_index=False).index == (0, 1, 2, 0, 1, 2)
+
+
 def test_df_setitem_create():
     long_df = pam.DataFrame(
         {
