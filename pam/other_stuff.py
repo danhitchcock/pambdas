@@ -25,6 +25,11 @@ nan = NaN()
 
 
 def is_bool(key):
+    """
+    Checks if the first value in some kind of item is a boolean value
+    :param key:
+    :return:
+    """
     try:
         item0 = key.iloc[0]
     except AttributeError:
@@ -32,6 +37,19 @@ def is_bool(key):
             item0 = key[0]
         else:
             item0 = key
+    if isinstance(item0, bool):
+        return True
+    return False
+
+
+def is_2d_bool(key):
+    try:
+        item0 = key.iloc[0, 0]
+    except AttributeError:
+        try:
+            item0 = key[0][0]
+        except:
+            return False
     if isinstance(item0, bool):
         return True
     return False

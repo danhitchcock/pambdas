@@ -1,7 +1,7 @@
 from copy import copy
 import itertools
 
-from .other_stuff import is_bool
+from .other_stuff import is_bool, is_2d_bool
 
 
 class ILocDF:
@@ -35,6 +35,7 @@ class ILocDF:
                 if is_bool(item):
                     items[i] = [i for i, val in enumerate(item) if val]
                 data_items[i] = self.obj.bound_iterable_to_df(items[i], axis=i)
+
             elif isinstance(item, slice):
                 items[i] = self.obj.convert_slice(item, axis=i)
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
@@ -148,8 +149,11 @@ class ILocDF:
         data_items = copy(items)
 
         # convert to bool, or bound
+
         for i, item in enumerate(items):
-            if isinstance(item, self.obj.ITERABLE_1D):
+            if is_2d_bool(item):
+                pass
+            elif isinstance(item, self.obj.ITERABLE_1D):
                 # if it's a boolean
                 if is_bool(item):
                     items[i] = [i for i, val in enumerate(item) if val]
@@ -159,6 +163,7 @@ class ILocDF:
                 data_items[i] = self.obj.bound_slice_to_df(items[i], axis=i)
             elif isinstance(item, int):
                 data_items[i] = self.obj.bound_int_to_df(item, axis=i)
+
         del items
 
         #################
@@ -231,7 +236,23 @@ class ILocDF:
                 for j in range(data_items[1].start, data_items[1].stop):
                     data[i + j * step] = value[k]
                     k += 1
-        if isinstance(data_items[0], self.obj.ITERABLE_1D) and isinstance(
+
+        # handle a 2d boolean key
+        if is_2d_bool(data_items[0]):
+            try:
+                data_items[0] = data_items[0].values
+            except:
+                pass
+
+            for i, row in enumerate(data_items[0]):
+                for j, col in enumerate(row):
+                    if col:
+                        self.obj.data[
+                            self.obj.bound_int_to_df(i, axis=0)
+                            + self.obj.bound_int_to_df(j, axis=1) * self.obj.step
+                        ] = value
+
+        elif isinstance(data_items[0], self.obj.ITERABLE_1D) and isinstance(
             data_items[1], slice
         ):
             # e.g. .iloc[[1, 2], :]
@@ -410,7 +431,15 @@ class LocDF(Loc):
         super().__init__(obj)
 
     def __setitem__(self, items, value, what=None):
+        # if it's a dataframe, send straight to iloc. It's a boolean key
+        if is_2d_bool(items):
+            self.obj.iloc.__setitem__(items, value)
+            return
+
         if isinstance(items, tuple):
+            if len(items) > 1 and is_2d_bool(items[1]):
+                self.obj.iloc.__setitem__(items[1], value)
+                return
             iloc_items = tuple(
                 self.obj.index_of(item, axis=i) for (i, item) in enumerate(items)
             )
