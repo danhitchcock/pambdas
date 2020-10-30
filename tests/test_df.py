@@ -359,6 +359,20 @@ def test_df_operators():
     assert (df > 10).values == [[False, False, True], [False, True, True]]
     assert (~(df > 10)).values == [[True, True, False], [True, False, False]]
 
+    df1 = pam.DataFrame([[0, nan, 20], [1, 11, 21]])
+    df2 = pam.DataFrame([[0, nan, 20], [1, 11, 21]])
+    assert df1.equals(df2)
+    assert df2.equals(df1)
+    df2 = pam.DataFrame(
+        [[0, 0, 0, 0, 0], [0, 0, nan, 20, 0], [0, 1, 11, 21, 0], [0, 0, 0, 0, 0]]
+    )
+    assert not df1.equals(df2)
+    assert not df2.equals(df1)
+
+    df2 = df2.iloc[1:-1, 1:-1]
+    assert df1.equals(df2)
+    assert df2.equals(df1)
+
 
 def test_df_getitem():
     # tests for getting dataframes from non-view dataframes

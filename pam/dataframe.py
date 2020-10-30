@@ -205,6 +205,10 @@ class DataFrame:
         df.drop()
         return df
 
+    def equals(self, other):
+
+        return (self.values == other.values) and (self.shape == other.shape)
+
     @property
     def values(self):
         data_rows = []
@@ -385,3 +389,6 @@ class DataFrame:
             self.data = self.data + [nan] * self.shape[0]
             self.shape = (self.shape[0], self.shape[1] + 1)
             self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
+
+    def append(self, other):
+        pass
