@@ -1,7 +1,7 @@
 import itertools
 from .series import Series
 from .indexers import ILocDF, LocDF
-from .other_stuff import nan, is_bool
+from .other_stuff import nan, is_bool, is_2d_bool
 
 
 class DataFrame:
@@ -86,7 +86,7 @@ class DataFrame:
         # gets here as slice and series
         if isinstance(cols, tuple):
             return self.loc[cols]
-        elif isinstance(cols, slice) or is_bool(cols):
+        elif isinstance(cols, slice) or is_bool(cols) or is_2d_bool(cols):
             return self.loc[cols, :]
         else:
             return self.loc[:, cols]

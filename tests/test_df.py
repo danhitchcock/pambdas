@@ -2,6 +2,15 @@ import pam
 import pytest
 
 
+def test_is_2d_bool():
+    a = [True]
+    assert not pam.other_stuff.is_2d_bool(a)
+    a = [[True, False, True, True], [False, True, False, False]]
+    assert pam.other_stuff.is_2d_bool(a)
+    a = pam.DataFrame({"one": [True, True], "two": [True, True]})
+    assert pam.other_stuff.is_2d_bool(a)
+
+
 def test_init_series():
     # test dictionary, default index
     ser = pam.Series([1, 100, 1000, 10000])
@@ -531,6 +540,33 @@ def test_df_setitem():
         [0, 100, 999, 0],
         [0, 0, 0, 0],
     ]
+
+    # Test Boolean setitem
+    # DataFrame
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df[df > 20] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df.loc[df > 20] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df.iloc[df > 20] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    # 2d boolean array
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df[(df > 20).values] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df.loc[(df > 20).values] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
+    df.iloc[(df > 20).values] = 99
+    assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
 
 
 def test_df_setitem_create():
