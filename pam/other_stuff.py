@@ -53,3 +53,19 @@ def is_2d_bool(key):
     if isinstance(item0, bool):
         return True
     return False
+
+
+def invert(item):
+    """
+    Copies and inverts a list or nested list
+    :param item: a nd iterable of boolean values
+    :return: ~item
+    """
+    res = []
+    if hasattr(item[0], "__len__"):
+        for i in range(len(item)):
+            res.append(invert(item[i]))
+    else:
+        res = [not val for val in item]
+        return res
+    return res

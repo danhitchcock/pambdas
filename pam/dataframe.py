@@ -87,6 +87,7 @@ class DataFrame:
         if isinstance(cols, tuple):
             return self.loc[cols]
         elif isinstance(cols, slice) or is_bool(cols) or is_2d_bool(cols):
+            print("Found a 2d array. Passing as item[0]")
             return self.loc[cols, :]
         else:
             return self.loc[:, cols]
@@ -143,6 +144,12 @@ class DataFrame:
 
     def __iter__(self):
         return iter(self.columns)
+
+    def __invert__(self):
+        df_cp = self.copy()
+        for i, val in enumerate(df_cp.data):
+            df_cp.data[i] = not df_cp.data[i]
+        return df_cp
 
     def drop(self, labels=None):
         """
