@@ -74,6 +74,10 @@ class DataFrame:
         return self
 
     @classmethod
+    def class_init(cls, *args, **kwargs):
+        return cls(*args, **kwargs)
+
+    @classmethod
     def series_from_data(cls, *args):
         return Series.from_data(*args)
 
@@ -151,6 +155,9 @@ class DataFrame:
             df_cp.data[i] = not df_cp.data[i]
         return df_cp
 
+    def __len__(self):
+        return self.shape[0]
+
     def drop(self, labels=None):
         """
         Drop both removes a specified column and trims internal data, producing a copy.
@@ -204,6 +211,10 @@ class DataFrame:
         )
         df.drop()
         return df
+
+    def equals(self, other):
+
+        return (self.values == other.values) and (self.shape == other.shape)
 
     @property
     def values(self):
@@ -385,3 +396,27 @@ class DataFrame:
             self.data = self.data + [nan] * self.shape[0]
             self.shape = (self.shape[0], self.shape[1] + 1)
             self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
+
+    def append(self, other, ignore_index=True):
+
+        columns = self.columns + tuple(
+            col for col in other.columns if col not in self.columns
+        )
+        data_columns = []
+        for col in columns:
+            if col in self.columns:
+                temp = self[col].values
+            else:
+                temp = [nan] * len(self)
+            if col in other.columns:
+                temp += other[col].values
+            else:
+                temp += [nan] * len(other)
+            data_columns.append(temp)
+        if ignore_index:
+            index = None
+        else:
+            index = self.index + other.index
+        return self.class_init(
+            {k: v for k, v in zip(columns, data_columns)}, index=index
+        )
