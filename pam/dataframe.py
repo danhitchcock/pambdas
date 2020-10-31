@@ -221,7 +221,6 @@ class DataFrame:
         return df
 
     def equals(self, other):
-
         return (self.values == other.values) and (self.shape == other.shape)
 
     @property
@@ -501,6 +500,15 @@ class DataFrame:
         cp = self.class_init(res, columns=cols)
         if axis == 0:
             cp = cp.transpose()
+        return cp
+
+    def reset_index(self, drop=False):
+        cp = self.copy()
+        if not drop:
+            cp["index"] = cp.index
+            cp = cp.loc[:, cp.columns[-1:] + cp.columns[:-1]]
+        cp.index = tuple(i for i in range(len(self)))
+
         return cp
 
 
