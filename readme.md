@@ -1,5 +1,5 @@
 # Pandas for Lambdas
-### My Attempt at a Pure Python version of Lambda
+### My Attempt at a Pure Python version of Pandas
 
 `git clone https://github.com/danhitchcock/pambda.git`  
 
