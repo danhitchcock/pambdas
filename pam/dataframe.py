@@ -37,10 +37,18 @@ class DataFrame:
             self.columns = tuple(data.keys())
         elif isinstance(data, list):
             if isinstance(data[0], self.ITERABLE_1D):
+                # if they are series, try to extract the data
+                try:
+                    self.index = tuple(d.name for d in data)
+                    self.columns = data[0].index
+                except:
+                    pass
                 self.step = len(data)
+
                 data = list(zip(*data))
                 for item in data:
                     self.data.extend(item)
+
             elif isinstance(data[0], dict):
                 for d_dict in data:
                     key, val = next(iter(d_dict.items()))
@@ -91,7 +99,6 @@ class DataFrame:
         if isinstance(cols, tuple):
             return self.loc[cols]
         elif isinstance(cols, slice) or is_bool(cols) or is_2d_bool(cols):
-            print("Found a 2d array. Passing as item[0]")
             return self.loc[cols, :]
         else:
             return self.loc[:, cols]
@@ -420,3 +427,59 @@ class DataFrame:
         return self.class_init(
             {k: v for k, v in zip(columns, data_columns)}, index=index
         )
+
+    def applymap(self, func):
+        cp = self.copy()
+        cp.data = [func(item) for item in cp.data]
+        return cp
+
+    def apply(self, func, axis=0):
+
+        res = []
+        index = []
+        if axis == 0:
+            it = self.iterrows
+        else:
+            it = self.itercols
+
+        for row in it():
+            try:
+                # if the function is reducing and works on an iterable, try that
+                res.append(func(row[1]))
+                print(row[1])
+                print("Current res: ", res)
+            except:
+                # otherwise, elementwise
+                res.append(row[1].apply(func))
+            index.append(row[0])
+
+        if isinstance(res[0], Series):
+            if axis == 1:
+                return self.class_init(res).transpose()
+            else:
+                return self.class_init(res)
+        else:
+            return Series(res, index)
+
+    def iterrows(self):
+        for i in range(len(self)):
+            try:
+                yield (self.index[i], self.iloc[i, :])
+            except:
+                return
+
+    def itercols(self):
+        for i in range(len(self)):
+            try:
+                yield (self.index[i], self.iloc[:, i])
+            except:
+                return
+
+    def transpose(self):
+        new_cols = self.index
+        new_index = self.columns
+        data = list(zip(*self.values))
+        print(new_cols, new_index, data)
+        cp = self.class_init(data, columns=new_cols, index=new_index)
+        print(cp)
+        return cp
