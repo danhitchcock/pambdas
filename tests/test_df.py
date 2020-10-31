@@ -460,6 +460,60 @@ def test_df_methods():
     assert df.apply(sum, axis=1).values == [6, 9]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
+    # sort values
+    df = pam.DataFrame({"one": [1, 2, nan, 0, -1], "two": [nan, 10, nan, 0, -1]})
+    assert df.sort_values(by="one", axis=0).values == [
+        [-1, -1],
+        [0, 0],
+        [1, nan],
+        [2, 10],
+        [nan, nan],
+    ]
+    assert df.sort_values(by="one", na_position="first", axis=0).values == [
+        [nan, nan],
+        [-1, -1],
+        [0, 0],
+        [1, nan],
+        [2, 10],
+    ]
+    assert df.sort_values(by="one", ascending=False, axis=0).values == [
+        [2, 10],
+        [1, nan],
+        [0, 0],
+        [-1, -1],
+        [nan, nan],
+    ]
+
+    assert df.sort_values(
+        by="one", ascending=False, na_position="first", axis=0
+    ).values == [[nan, nan], [2, 10], [1, nan], [0, 0], [-1, -1]]
+
+    assert df.sort_values(
+        by="two", ascending=False, na_position="first", axis=0
+    ).values == [[1, nan], [nan, nan], [2, 10], [0, 0], [-1, -1]]
+    assert df.equals(
+        pam.DataFrame({"one": [1, 2, nan, 0, -1], "two": [nan, 10, nan, 0, -1]})
+    )
+
+    df = pam.DataFrame({"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]})
+    assert df.sort_values(by=0, axis=1).values == [
+        [1, nan],
+        [2, 10],
+        [nan, nan],
+        [0, 0],
+        [10, -1],
+    ]
+    assert df.sort_values(by=4, axis=1).values == [
+        [nan, 1],
+        [10, 2],
+        [nan, nan],
+        [0, 0],
+        [-1, 10],
+    ]
+    assert df.equals(
+        pam.DataFrame({"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]})
+    )
+
 
 def test_df_operators():
     df = pam.DataFrame([[0, 10, 20], [1, 11, 21]])

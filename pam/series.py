@@ -247,6 +247,7 @@ class Series:
         :param na_position: str, 'first' or 'last'
         :return: Series, sorted
         """
+        # remove nans
         indices = [i for i, x in enumerate(self.values) if x is nan]
         nan_index = [self.index[i] for i in indices]
         new_values = self.values
@@ -254,6 +255,7 @@ class Series:
         for i, idx in enumerate(indices):
             del new_values[idx - i]
             del new_index[idx - i]
+
         reverse = not ascending
         new_values, new_index = zip(
             *sorted(zip(new_values, new_index), reverse=reverse)
