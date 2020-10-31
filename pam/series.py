@@ -154,7 +154,7 @@ class Series:
 
     def copy(self):
         ser = self.from_data(
-            self.data[self.view], self.index, self.name, slice(0, len(self.index))
+            self.data[self.view], self.index, self.name, slice(0, len(self.index), 1)
         )
         return ser
 
@@ -210,3 +210,15 @@ class Series:
         :return: list, a lit of index of the underlying data
         """
         return [self.bound_int(item) for item in iterable]
+
+    def astype(self, type_name, copy=True):
+        res = self.apply(type_name)
+        if copy:
+            return res
+        self.iloc[:] = res.values
+
+    def apply(self, func):
+        cp = self.copy()
+        for i, val in enumerate(cp.values):
+            cp.iloc[i] = func(val)
+        return cp

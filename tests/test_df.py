@@ -33,9 +33,27 @@ def test_invert():
     assert a == [[True, False, True], [False, False, True]]
 
 
-def test_series_drop():
+def test_series_methods():
+    # drop
     a = pam.Series([0, 1, 2, 3])
     a.drop(2)
+
+    # astype
+    a = pam.DataFrame([[1, 2, 4], [2, 3, 4]])
+    a.iloc[0] = a.iloc[0].astype(float)
+    assert a.values == [[1.0, 2.0, 4.0], [2, 3, 4]]
+
+    a = pam.DataFrame([[1, 2, 4], [2, 3, 4]])
+    a.iloc[:, 0] = a.iloc[:, 0].astype(float)
+    assert a.values == [[1.0, 2, 4], [2.0, 3, 4]]
+
+    a = pam.DataFrame([[1, 2, 4], [2, 3, 4]])
+    a.iloc[0] = a.iloc[0].apply(lambda x: x ** 2)
+    assert a.values == [[1, 4, 16], [2, 3, 4]]
+
+    a = pam.DataFrame([[1, 2, 4], [2, 3, 4]])
+    a.iloc[:, 0] = a.iloc[:, 0].apply(lambda x: x ** 2)
+    assert a.values == [[1, 2, 4], [4, 3, 4]]
 
 
 def test_init_dataframe():
