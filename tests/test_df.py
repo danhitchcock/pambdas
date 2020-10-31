@@ -124,6 +124,39 @@ def test_series_methods():
     )
 
 
+def test_df_read_csv():
+    df = pam.read_csv("tests/test.csv")
+    assert df.values == [
+        ["0", "hello", "0", "10/1/2020"],
+        ["1", "world", "1", "10/2/2020"],
+        ["2", "how", "2", "10/3/2020"],
+        ["hi", "are", "3", "10/4/2020"],
+    ]
+    assert df.index == (0, 1, 2, 3)
+    assert df.columns == ("one", "two", "three", "four")
+
+    df = pam.read_csv("tests/test.csv", index_col=1)
+    assert df.values == [
+        ["0", "0", "10/1/2020"],
+        ["1", "1", "10/2/2020"],
+        ["2", "2", "10/3/2020"],
+        ["hi", "3", "10/4/2020"],
+    ]
+    assert df.columns == ("one", "three", "four")
+    assert df.index == ("hello", "world", "how", "are")
+
+    df = pam.read_csv("tests/test.csv", index_col=1, names=["a", "b", "c"])
+    assert df.values == [
+        ["one", "three", "four"],
+        ["0", "0", "10/1/2020"],
+        ["1", "1", "10/2/2020"],
+        ["2", "2", "10/3/2020"],
+        ["hi", "3", "10/4/2020"],
+    ]
+    assert df.columns == ("a", "b", "c")
+    assert df.index == ("two", "hello", "world", "how", "are")
+
+
 def test_init_dataframe():
     # test dictionary, default index
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
@@ -865,4 +898,3 @@ def test_df_setitem_create():
 def test_ser_setitem_create():
     ser = pam.Series([0, 1, 2, 3, 4])
     ser.loc["dne"] = 100
-    print(ser)

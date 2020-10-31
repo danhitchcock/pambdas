@@ -1,4 +1,4 @@
-from .dataframe import DataFrame
+from .dataframe import DataFrame, read_csv
 from .series import Series
 from .other_stuff import nan
 
