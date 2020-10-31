@@ -372,6 +372,13 @@ def test_ser_setitem():
         ser2.iloc[4] = 10
 
 
+def test_df_methods():
+    # test apply
+    df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
+    assert df.applymap(lambda x: x ** 2).values == [[1, 4], [4, 9], [9, 16]]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+
 def test_df_operators():
     df = pam.DataFrame([[0, 10, 20], [1, 11, 21]])
     assert (df > 10).values == [[False, False, True], [False, True, True]]

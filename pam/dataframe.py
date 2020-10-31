@@ -420,3 +420,8 @@ class DataFrame:
         return self.class_init(
             {k: v for k, v in zip(columns, data_columns)}, index=index
         )
+
+    def applymap(self, func):
+        cp = self.copy()
+        cp.data = [func(item) for item in cp.data]
+        return cp
