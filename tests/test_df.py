@@ -56,6 +56,45 @@ def test_series_methods():
     a.iloc[:, 0] = a.iloc[:, 0].apply(lambda x: x ** 2)
     assert a.values == [[1, 2, 4], [4, 3, 4]]
 
+    # sort_values
+    ser = pam.Series([1, 10, 20, pam.other_stuff.nan, 40, 20, pam.other_stuff.nan])
+    assert ser.sort_values().values == [
+        1,
+        10,
+        20,
+        20,
+        40,
+        pam.other_stuff.nan,
+        pam.other_stuff.nan,
+    ]
+    assert ser.sort_values(na_position="first").values == [
+        pam.other_stuff.nan,
+        pam.other_stuff.nan,
+        1,
+        10,
+        20,
+        20,
+        40,
+    ]
+    assert ser.sort_values(ascending=False).values == [
+        40,
+        20,
+        20,
+        10,
+        1,
+        pam.other_stuff.nan,
+        pam.other_stuff.nan,
+    ]
+    assert ser.sort_values(ascending=False, na_position="first").values == [
+        pam.other_stuff.nan,
+        pam.other_stuff.nan,
+        40,
+        20,
+        20,
+        10,
+        1,
+    ]
+
 
 def test_init_dataframe():
     # test dictionary, default index

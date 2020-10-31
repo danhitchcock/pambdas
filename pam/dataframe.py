@@ -483,3 +483,6 @@ class DataFrame:
         cp = self.class_init(data, columns=new_cols, index=new_index)
         print(cp)
         return cp
+
+    def sort_values(self, by, ascending=True, axis=0, na_position="last"):
+        pass
