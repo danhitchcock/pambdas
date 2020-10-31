@@ -446,8 +446,6 @@ class DataFrame:
             try:
                 # if the function is reducing and works on an iterable, try that
                 res.append(func(row[1]))
-                print(row[1])
-                print("Current res: ", res)
             except:
                 # otherwise, elementwise
                 res.append(row[1].apply(func))
@@ -479,7 +477,27 @@ class DataFrame:
         new_cols = self.index
         new_index = self.columns
         data = list(zip(*self.values))
-        print(new_cols, new_index, data)
         cp = self.class_init(data, columns=new_cols, index=new_index)
-        print(cp)
+        return cp
+
+    def sort_values(self, by, ascending=True, axis=0, na_position="last"):
+        if axis == 0:
+            it = self.itercols
+            ser = self.loc[:, by]
+
+        else:
+            it = self.iterrows
+            ser = self.loc[by, :]
+
+        new_index = ser.sort_values(ascending, na_position).index
+        res = []
+        cols = []
+
+        for ser in it():
+            res.append(ser[1].loc[new_index])
+            cols.append(ser[0])
+
+        cp = self.class_init(res, columns=cols)
+        if axis == 0:
+            cp = cp.transpose()
         return cp

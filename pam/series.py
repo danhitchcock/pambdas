@@ -239,3 +239,33 @@ class Series:
         for i, val in enumerate(cp.values):
             cp.iloc[i] = func(val)
         return cp
+
+    def sort_values(self, ascending=True, na_position="last"):
+        """
+        sort_values sorts a series using the python built-in sorted function.
+        :param ascending: bool, whether or not sorted values should be ascending
+        :param na_position: str, 'first' or 'last'
+        :return: Series, sorted
+        """
+        # remove nans
+        indices = [i for i, x in enumerate(self.values) if x is nan]
+        nan_index = [self.index[i] for i in indices]
+        new_values = self.values
+        new_index = list(self.index)
+        for i, idx in enumerate(indices):
+            del new_values[idx - i]
+            del new_index[idx - i]
+
+        reverse = not ascending
+        new_values, new_index = zip(
+            *sorted(zip(new_values, new_index), reverse=reverse)
+        )
+
+        if na_position == "last":
+            new_values = list(new_values) + [nan] * len(nan_index)
+            new_index = list(new_index) + list(nan_index)
+        else:
+            new_values = [nan] * len(nan_index) + list(new_values)
+            new_index = list(nan_index) + list(new_index)
+
+        return self.from_data(new_values, new_index, name=self.name)

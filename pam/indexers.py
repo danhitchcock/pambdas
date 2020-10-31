@@ -399,7 +399,6 @@ class Loc:
         """
         getitem is the same for both DF and Series
         """
-
         if isinstance(items, tuple):
 
             if is_2d_bool(items[0]):
@@ -412,7 +411,11 @@ class Loc:
             if is_2d_bool(items):
                 return self.obj.iloc[items]
             iloc_items = self.obj.index_of(items)
-
+        if None in iloc_items:
+            raise KeyError(
+                "One or more items not found. Index: %s, Column: %s"
+                % (items[0], items[1])
+            )
         return self.obj.iloc[iloc_items]
 
 
