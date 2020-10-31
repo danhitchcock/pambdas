@@ -1,5 +1,7 @@
+from datetime import datetime
 from .indexers import LocSer, ILocSer
 from .other_stuff import nan, is_bool
+import functools
 
 
 class Series:
@@ -42,6 +44,8 @@ class Series:
         self.name = name
         self.iloc = ILocSer(self)
         self.loc = LocSer(self)
+        self.str = STR(self)
+        self.dt = DT(self)
 
     def __setitem__(self, key, value):
         self.loc.__setitem__(key, value)
@@ -234,10 +238,10 @@ class Series:
             return res
         self.iloc[:] = res.values
 
-    def apply(self, func):
+    def apply(self, func, *args, **kwargs):
         cp = self.copy()
         for i, val in enumerate(cp.values):
-            cp.iloc[i] = func(val)
+            cp.iloc[i] = func(val, *args, **kwargs)
         return cp
 
     def sort_values(self, ascending=True, na_position="last"):
@@ -269,3 +273,21 @@ class Series:
             new_index = list(nan_index) + list(new_index)
 
         return self.from_data(new_values, new_index, name=self.name)
+
+
+class STR:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __getattr__(self, item):
+        # must return a partialed apply, which can accept args
+        return functools.partial(self.obj.apply, func=getattr(str, item))
+
+
+class DT:
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __getattr__(self, item):
+        # must return a partialed apply, which can accept args
+        return functools.partial(self.obj.apply, func=getattr(datetime, item))
