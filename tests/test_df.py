@@ -575,6 +575,42 @@ def test_df_methods():
         pam.DataFrame({"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]})
     )
 
+    # test reset_index
+    df = pam.DataFrame(
+        {"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]},
+        index=[10, 11, 12, 13, 14],
+    )
+    ## test without drop
+    df2 = df.reset_index()
+    assert (
+        df.values
+        == pam.DataFrame(
+            {"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]},
+            index=[10, 11, 12, 13, 14],
+        ).values
+    )
+    assert df2.values == [
+        [10, 1, nan],
+        [11, 2, 10],
+        [12, nan, nan],
+        [13, 0, 0],
+        [14, 10, -1],
+    ]
+    assert df2.index == (0, 1, 2, 3, 4)
+
+    ## test with drop
+    df2 = df.reset_index(drop=True)
+    assert (
+        df.values
+        == pam.DataFrame(
+            {"one": [1, 2, nan, 0, 10], "two": [nan, 10, nan, 0, -1]},
+            index=[10, 11, 12, 13, 14],
+        ).values
+    )
+
+    assert df.equals(df2)
+    assert df2.index == (0, 1, 2, 3, 4)
+
 
 def test_df_operators():
     df = pam.DataFrame([[0, 10, 20], [1, 11, 21]])
