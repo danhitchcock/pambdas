@@ -1,6 +1,7 @@
 import pam
 import pytest
 from pam.other_stuff import nan
+from functools import reduce
 
 
 def test_is_2d_bool():
@@ -373,9 +374,51 @@ def test_ser_setitem():
 
 
 def test_df_methods():
-    # test apply
+    # test transpose
+    df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
+    df2 = df.transpose()
+    assert df.equals(pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]}))
+    assert df.columns == ("one", "two")
+    assert df.index == (0, 1, 2)
+    assert df2.values == [[1, 2, 3], [2, 3, 4]]
+    assert df2.index == ("one", "two")
+    assert df2.columns == (0, 1, 2)
+
+    # test applymap
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
     assert df.applymap(lambda x: x ** 2).values == [[1, 4], [4, 9], [9, 16]]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+    # test apply
+    ## non-reducing
+    ### rows
+    df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
+    assert df.apply(lambda x: x ** 2, axis=0).values == [[1, 4], [4, 9], [9, 16]]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+    ### columns
+    assert df.apply(lambda x: x ** 2, axis=1).values == [[1, 4], [4, 9], [9, 16]]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+    ## reducing
+
+    def multiply(iterable):
+        res = reduce((lambda x, y: x * y), iterable)
+        return res
+
+    ### rows
+    assert df.apply(multiply, axis=0).values == [2, 6, 12]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+    ### columns
+    assert df.apply(multiply, axis=1).values == [6, 24]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+    ### rows
+    assert df.apply(sum, axis=0).values == [3, 5, 7]
+    assert df.values == [[1, 2], [2, 3], [3, 4]]
+
+    ### columns
+    assert df.apply(sum, axis=1).values == [6, 9]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
 

@@ -76,8 +76,14 @@ class Series:
                 return item
             return [names.index(i) for i in item]
         elif isinstance(item, slice):
-            start = None if item.start is None else names.index(item.start)
-            stop = None if item.stop is None else names.index(item.stop)
+            try:
+                start = None if item.start is None else names.index(item.start)
+                stop = None if item.stop is None else names.index(item.stop)
+            except ValueError:
+                raise IndexError(
+                    "At least one of the following values is not in the index: %s %s"
+                    % (item.start, item.stop)
+                )
             return slice(start, stop)
         else:
             try:
@@ -169,6 +175,17 @@ class Series:
 
     def __len__(self):
         return len(self.index)
+
+    def __next__(self):
+        for i in range(len(self)):
+            try:
+                yield self.iloc[i]
+            except IndexError:
+                raise StopIteration
+
+    def __iter__(self):
+        for val in self.values:
+            yield val
 
     def bound_slice(self, slc):
         """
