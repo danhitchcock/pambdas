@@ -1,3 +1,5 @@
+import datetime
+from datetime import timezone
 import pam
 import pytest
 from pam.other_stuff import nan
@@ -94,6 +96,32 @@ def test_series_methods():
         10,
         1,
     ]
+
+    # Test string
+    ser = pam.Series(["one", "two", "three"])
+    assert ser.str.upper().values == ["ONE", "TWO", "THREE"]
+
+    ser = pam.Series(
+        [
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+        ]
+    )
+
+    # Test Datetime
+    assert ser.dt.replace(tzinfo=timezone.utc).values == [
+        datetime.datetime(2007, 12, 6, 16, 29, 43, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2007, 12, 6, 16, 29, 43, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2007, 12, 6, 16, 29, 43, tzinfo=datetime.timezone.utc),
+    ]
+    assert ser == pam.Series(
+        [
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+            datetime.datetime(2007, 12, 6, 16, 29, 43),
+        ]
+    )
 
 
 def test_init_dataframe():
