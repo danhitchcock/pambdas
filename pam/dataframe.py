@@ -1,4 +1,5 @@
 import itertools
+import csv
 from .series import Series
 from .indexers import ILocDF, LocDF
 from .other_stuff import nan, is_bool, is_2d_bool
@@ -501,3 +502,34 @@ class DataFrame:
         if axis == 0:
             cp = cp.transpose()
         return cp
+
+
+def read_csv(filepath, sep=",", header=0, names=None, index_col=None):
+    # see if there is an fspath
+    try:
+        filepath = filepath.__fspath__()
+    except:
+        pass
+    index = []
+    columns = []
+    data = []
+    if names is not None:
+        header = None
+        columns = names
+    with open(filepath) as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=sep)
+        for i, row in enumerate(spamreader):
+            if isinstance(header, int) and header == i:
+                if isinstance(index_col, int):
+                    columns = row[:index_col] + row[index_col + 1 :]
+                else:
+                    columns = row
+                continue
+
+            if isinstance(index_col, int):
+                index.append(row[index_col])
+                data.append(row[:index_col] + row[index_col + 1 :])
+            else:
+                data.append(row)
+
+    return DataFrame(data, columns=columns, index=index)
