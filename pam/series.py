@@ -294,6 +294,62 @@ class Series:
 
         return self.from_data(new_values, new_index, name=self.name)
 
+    def unique(self):
+        return list(set(self.values))
+
+    def __add__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] += val
+        else:
+            for i in range(len(self)):
+                cp.data[i] += other
+        return cp
+
+    def __radd__(self, other):
+        return 2
+
+    def __mul__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] *= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] *= other
+        return cp
+
+    def __truediv__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] /= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] /= other
+        return cp
+
+    def __floordiv__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] //= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] //= other
+        return cp
+
+    def __pow__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] **= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] **= other
+        return cp
+
 
 class STR:
     def __init__(self, obj):

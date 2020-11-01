@@ -362,6 +362,7 @@ class DataFrame:
         if isinstance(item, self.ITERABLE_1D):
             # bypass for boolean
             if is_bool(item):
+                print("returning a bool")
                 return item
             return [names.index(i) for i in item]
         elif isinstance(item, slice):
@@ -442,14 +443,15 @@ class DataFrame:
         else:
             iterator = self.itercols
 
-        for row in iterator():
+        for item in iterator():
             try:
                 # if the function is reducing and works on an iterable, try that
-                res.append(func(row[1]))
+                res.append(func(item[1]))
+
             except:
                 # otherwise, elementwise
-                res.append(row[1].apply(func))
-            index.append(row[0])
+                res.append(item[1].apply(func))
+            index.append(item[0])
 
         if isinstance(res[0], Series):
             if axis == 1:
@@ -510,6 +512,29 @@ class DataFrame:
         cp.index = tuple(i for i in range(len(self)))
 
         return cp
+
+    def groupby(self, by, axis=0):
+        """
+
+        :param by:
+        :param axis:
+        :return: Groupby object
+        """
+        gb = Group_By()
+        for item in self[by].unique():
+            df = self.loc[self[by] == item, :]
+            df.drop(by)
+            gb.dfs.append(df)
+        return gb
+
+
+class Group_By:
+    def __init__(self):
+        self.dfs = []
+
+    def apply(self, func):
+        for df in self.dfs:
+            print(df.apply(func, axis=1))
 
 
 def read_csv(filepath, sep=",", header=0, names=None, index_col=None):

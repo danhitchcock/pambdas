@@ -472,7 +472,8 @@ class LocDF:
             if is_2d_bool(items):
                 return self.obj.iloc[items]
             iloc_items = self.obj.index_of(items)
-        if None in iloc_items:
+        # can't use None in iloc_items. Fails with a series
+        if any(elem is None for elem in iloc_items):
             raise KeyError(
                 "One or more items not found. Index: %s, Column: %s"
                 % (items[0], items[1])

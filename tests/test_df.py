@@ -36,6 +36,17 @@ def test_invert():
     assert a == [[True, False, True], [False, False, True]]
 
 
+def test_series_arithmetic():
+
+    ser = pam.Series([1, 2, 3])
+    assert (ser + 1).values == [2, 3, 4]
+    assert (ser + ser).values == [2, 4, 6]
+    assert (ser * -1).values == [-1, -2, -3]
+    assert (ser * ser).values == [1, 4, 9]
+    assert (ser / ser).values == [1.0, 1.0, 1.0]
+    assert (ser // ser).values == [1, 1, 1]
+
+
 def test_series_methods():
     # drop
     a = pam.Series([0, 1, 2, 3])
@@ -686,6 +697,7 @@ def test_df_getitem():
     exp_index = (11, 12, 13)
     exp_values = [[0, 1, 3], [1, 2, 4], [2, 3, 5]]
 
+    assert long_df["a"] == pam.Series([0, 0, 0, 0, 0], index=[10, 11, 12, 13, 14])
     # non-view tests
     df1 = long_df.iloc[1:-1, 1:-1]
     assert df1.values == exp_values
@@ -987,3 +999,14 @@ def test_df_setitem_create():
     df = long_df.iloc[1:-1, 1:-1]
     df.loc[:, "dne"] = [99, 99, 99]
     df.loc["dne", :] = 100
+
+
+def test_groupby():
+    df = pam.DataFrame(
+        {
+            "Animal": ["Falcon", "Falcon", "Parrot", "Parrot"],
+            "Max Speed": [380.0, 370.0, 24.0, 26.0],
+            "Min Speed": [20, 21, 2, 3],
+        }
+    )
+    print(df.groupby("Animal").apply(sum))
