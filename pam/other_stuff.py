@@ -20,6 +20,27 @@ class NaN:
     def __repr__(self):
         return self.__str__()
 
+    def __add__(self, other):
+        return self
+
+    def __radd__(self, other):
+        return self
+
+    def __truediv__(self, other):
+        return self
+
+    def __floordiv__(self, other):
+        return self
+
+    def __mul__(self, other):
+        return self
+
+    def __pow__(self, other):
+        return self
+
+    def __mod__(self, other):
+        return self
+
 
 nan = NaN()
 

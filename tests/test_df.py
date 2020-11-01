@@ -134,6 +134,14 @@ def test_series_methods():
         ]
     )
 
+    # Test isna
+    ser = pam.Series([1, 2, nan, 3])
+    assert ser.isna().values == [False, False, True, False]
+
+    # test dropna
+    print(pam.Series([1, 2, 3], index=(0, 1, 3)))
+    assert ser.dropna() == pam.Series([1, 2, 3], index=(0, 1, 3))
+
 
 def test_df_read_csv():
     df = pam.read_csv("tests/test.csv")
@@ -542,7 +550,7 @@ def test_df_methods():
     ## non-reducing
     ### rows
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
-    assert df.apply(lambda x: x ** 2, axis=0).values == [[1, 4], [4, 9], [9, 16]]
+    assert df.apply(lambda x: x ** 2, axis=1).values == [[1, 4], [4, 9], [9, 16]]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
     ### columns
     assert df.apply(lambda x: x ** 2, axis=1).values == [[1, 4], [4, 9], [9, 16]]
@@ -555,21 +563,29 @@ def test_df_methods():
         return res
 
     ### rows
-    assert df.apply(multiply, axis=0).values == [2, 6, 12]
+    assert df.apply(multiply, axis=1).values == [2, 6, 12]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
     ### columns
-    assert df.apply(multiply, axis=1).values == [6, 24]
+    assert df.apply(multiply, axis=0).values == [6, 24]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
     ### rows
-    assert df.apply(sum, axis=0).values == [3, 5, 7]
+    assert df.apply(sum, axis=1).values == [3, 5, 7]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
     ### columns
-    assert df.apply(sum, axis=1).values == [6, 9]
+    assert df.apply(sum, axis=0).values == [6, 9]
     assert df.values == [[1, 2], [2, 3], [3, 4]]
 
+    ### with nas
+    df = pam.DataFrame({"one": [1, nan, 3], "two": [2, 3, 4]})
+    assert df.apply(sum, axis=0).values == [4, 9]
+    assert df.values == [[1, 2], [nan, 3], [3, 4]]
+
+    ### columns
+    assert df.apply(multiply, axis=0).values == [3, 24]
+    assert df.values == [[1, 2], [nan, 3], [3, 4]]
     # sort values
     df = pam.DataFrame({"one": [1, 2, nan, 0, -1], "two": [nan, 10, nan, 0, -1]})
     assert df.sort_values(by="one", axis=0).values == [
@@ -1005,8 +1021,47 @@ def test_groupby():
     df = pam.DataFrame(
         {
             "Animal": ["Falcon", "Falcon", "Parrot", "Parrot"],
-            "Max Speed": [380.0, 370.0, 24.0, 26.0],
-            "Min Speed": [20, 21, 2, 3],
+            "Max Speed": [100, 120, 24, 26],
+            "Min Speed": [20, 22, 2, 4],
         }
     )
-    print(df.groupby("Animal").apply(sum))
+    res = (
+        df.groupby("Animal").sum().loc[["Falcon", "Parrot"], ["Max Speed", "Min Speed"]]
+    )
+    assert res.values == [[220, 42], [50, 6]]
+    assert res.columns == ("Max Speed", "Min Speed")
+    assert res.index == ("Falcon", "Parrot")
+
+    res = (
+        df.groupby("Animal")
+        .mean()
+        .loc[["Falcon", "Parrot"], ["Max Speed", "Min Speed"]]
+    )
+    assert res.values == [[110.0, 21.0], [25.0, 3.0]]
+    assert res.columns == ("Max Speed", "Min Speed")
+    assert res.index == ("Falcon", "Parrot")
+
+    df = pam.DataFrame(
+        {
+            "Animal": ["Falcon", "Falcon", "Parrot", "Parrot"],
+            "Max Speed": [100, nan, 24, 26],
+            "Min Speed": [20, 22, 2, 4],
+        }
+    )
+    res = (
+        df.groupby("Animal")
+        .apply(lambda x: sum(x))
+        .loc[["Falcon", "Parrot"], ["Max Speed", "Min Speed"]]
+    )
+    assert res.values == [[100, 42], [50, 6]]
+    assert res.columns == ("Max Speed", "Min Speed")
+    assert res.index == ("Falcon", "Parrot")
+
+    res = (
+        df.groupby("Animal")
+        .apply(lambda x: sum(x), dropna=False)
+        .loc[["Falcon", "Parrot"], ["Max Speed", "Min Speed"]]
+    )
+    assert res.values == [[nan, 42], [50, 6]]
+    assert res.columns == ("Max Speed", "Min Speed")
+    assert res.index == ("Falcon", "Parrot")
