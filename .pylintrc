@@ -1,3 +1,4 @@
 [FORMAT]
 max-line-length=88
 disable=bad-continuation
+good-names=i,j,k,df,cp,dt

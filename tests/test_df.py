@@ -386,6 +386,16 @@ def test_ser_getitem():
     ser = pam.Series([0, 1, 2, 3], index=[3, 2, 1, 0])
     assert ser.loc[(0, 1, 2, 3)] == [3, 2, 1, 0]
 
+    # test ser getitem
+    ser = pam.Series([0, 1, 2, 3], index=[3, 2, 1, 0])
+    with pytest.raises(KeyError):
+        assert ser[0, 1, 2, 4] == [3, 2, 1, 0]
+    with pytest.raises(KeyError):
+        assert ser[4] == nan
+    assert ser[[0, 1, 2, 3]] == [3, 2, 1, 0]
+
+    assert ser[[0, 1, 100]] == [3, 2, nan]
+
 
 def test_ser_setitem():
     # Test iloc
@@ -916,6 +926,24 @@ def test_df_setitem():
     df = pam.DataFrame([[1, 10, 100, 1000], [2, 20, 200, 2000], [3, 30, 300, 3000]])
     df.iloc[(df > 20).values] = 99
     assert df.values == [[1, 10, 99, 99], [2, 20, 99, 99], [3, 99, 99, 99]]
+
+    # test setitem with an non matching series
+    df = pam.DataFrame({"one": [10, 10, 10], "two": [20, 20, 20]})
+    ser = pam.Series([4, 2, 1], index=(2, 1, 0))
+    df["three"] = ser
+    assert df["three"].values == [1, 2, 4]
+
+    # test setitem with an non matching series
+    df = pam.DataFrame({"one": [10, 10, 10], "two": [20, 20, 20]})
+    ser = pam.Series([4, 2, 1], index=(3, 1, 0))
+    df["three"] = ser
+    assert df["three"].values == [1, 2, nan]
+
+    # test rowwise setitem with a non matching index
+    df = pam.DataFrame({"one": [10, 10, 10], "two": [20, 20, 20]})
+    ser = pam.Series([2, 1], index=("two", "three"))
+    df.loc["hello", :] = ser
+    assert df.loc["hello", :].values == [nan, 2]
 
 
 def test_df_merging():
