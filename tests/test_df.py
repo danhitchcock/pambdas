@@ -381,6 +381,11 @@ def test_ser_getitem():
     with pytest.raises(IndexError):
         assert ser2.iloc[5] == 4
 
+    # test loc
+    ## test tuple
+    ser = pam.Series([0, 1, 2, 3], index=[3, 2, 1, 0])
+    assert ser.loc[(0, 1, 2, 3)] == [3, 2, 1, 0]
+
 
 def test_ser_setitem():
     # Test iloc
@@ -471,6 +476,29 @@ def test_ser_setitem():
     ser2 = ser.iloc[:-1]
     with pytest.raises(IndexError):
         ser2.iloc[4] = 10
+
+    # test loc
+    ser = pam.Series([0, 1, 2, 3, 4])
+    ser.loc[0, 1] = 100
+    assert ser.values == [100, 100, 2, 3, 4]
+
+    ser = pam.Series([0, 1, 2, 3, 4])
+    ser.loc["dne"] = 100
+    assert ser.index == (0, 1, 2, 3, 4, "dne")
+    assert ser.values == [0, 1, 2, 3, 4, 100]
+
+    ser = pam.Series([0, 1, 2, 3, 4])
+    ser.loc[1:3] = 100
+    assert ser.index == (0, 1, 2, 3, 4)
+    assert ser.values == [0, 100, 100, 3, 4]
+
+    with pytest.raises(KeyError):
+        ser = pam.Series([0, 1, 2, 3, 4])
+        ser.loc["dne", "dne2"] = 100
+
+    with pytest.raises(KeyError):
+        ser = pam.Series([0, 1, 2, 3, 4])
+        ser.loc["dne":"dne2"] = 100
 
 
 def test_df_methods():
@@ -689,6 +717,8 @@ def test_df_getitem():
     assert df4.index == exp_index
 
     # Tests for getting series from non-view dataframes
+    ###
+
     ## Tests for dataframes without custom index
     ### test for view, int
     df = pam.DataFrame({"one": [1, 2, 3], "two": [2, 3, 4]})
@@ -929,8 +959,3 @@ def test_df_setitem_create():
     df = long_df.iloc[1:-1, 1:-1]
     df.loc[:, "dne"] = [99, 99, 99]
     df.loc["dne", :] = 100
-
-
-def test_ser_setitem_create():
-    ser = pam.Series([0, 1, 2, 3, 4])
-    ser.loc["dne"] = 100

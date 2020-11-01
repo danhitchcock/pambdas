@@ -71,20 +71,30 @@ class Series:
     def __iter__(self):
         return iter(self.data[self.view])
 
-    def index_of(self, item, axis=None):
+    def index_of(self, item):
+        """
+        Returns the integer index of values in the index.
+
+        :param item: slice, iterable, any hashable object
+
+        :return: list, slice, int
+        """
         names = self.index
 
         if isinstance(item, self.ITERABLE_1D + (self.__class__,)):
-            # bypass for boolean
-            if is_bool(item):
-                return item
-            return [names.index(i) for i in item]
+            items = []
+            for i in item:
+                try:
+                    items.append(names.index(i))
+                except ValueError:
+                    raise KeyError("Series label %s not found." % i)
+            return items
         elif isinstance(item, slice):
             try:
                 start = None if item.start is None else names.index(item.start)
                 stop = None if item.stop is None else names.index(item.stop)
             except ValueError:
-                raise IndexError(
+                raise KeyError(
                     "At least one of the following values is not in the index: %s %s"
                     % (item.start, item.stop)
                 )
@@ -92,7 +102,7 @@ class Series:
         else:
             try:
                 return names.index(item)
-            except:
+            except ValueError:
                 return None
 
     @property
