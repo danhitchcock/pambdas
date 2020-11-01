@@ -320,9 +320,6 @@ class ILocSer:
         self.obj = obj
 
     def __getitem__(self, item):
-        if isinstance(item, tuple):
-            item = item[0]
-
         if isinstance(item, slice):
             item = slice(
                 item.start if item.start is not None else 0,
