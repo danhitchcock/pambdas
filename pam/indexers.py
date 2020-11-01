@@ -347,10 +347,6 @@ class ILocSer:
             return self.obj.values[item]
 
     def __setitem__(self, item, value):
-        # if there are multiple args, just take the first item
-        if isinstance(item, tuple):
-            item = item[0]
-
         # convert to bool, or bound
         if isinstance(item, self.ITERABLE_1D + (self.obj.__class__,)):
             # if it's a boolean
@@ -395,6 +391,37 @@ class Loc:
     def __init__(self, obj):
         self.obj = obj
 
+
+class LocSer(Loc):
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __setitem__(self, items, value, what=None):
+        iloc_items = self.obj.index_of(items)
+
+        # if index_of returned none, create it
+        if iloc_items is None:
+            self.obj.extend(items, num=1)
+            self.__setitem__(items, value)
+        else:
+            self.obj.iloc.__setitem__(iloc_items, value)
+
+    def __getitem__(self, items):
+        """
+        Getitem for series. Should only have 1 input -- a tuple will be converted to a list.
+        """
+        if is_bool(items):
+            return self.obj.iloc[items]
+        iloc_items = self.obj.index_of(items)
+        return self.obj.iloc[iloc_items]
+
+
+class LocDF(Loc):
+    def __init__(self, obj=None):
+        if obj is None:
+            return
+        super().__init__(obj)
+
     def __getitem__(self, items):
         """
         getitem is the same for both DF and Series
@@ -417,36 +444,6 @@ class Loc:
                 % (items[0], items[1])
             )
         return self.obj.iloc[iloc_items]
-
-
-class LocSer(Loc):
-    def __init__(self, obj):
-        super().__init__(obj)
-
-    def __setitem__(self, items, value, what=None):
-        if isinstance(items, tuple):
-            iloc_items = tuple(
-                self.obj.index_of(item, axis=i) for (i, item) in enumerate(items)
-            )
-        else:
-            iloc_items = (self.obj.index_of(items),)
-
-        if iloc_items[0] is None:
-            if isinstance(items, self.ITERABLE_1D + (self.obj.__class__,)):
-                num = len(items)
-            else:
-                num = 1
-            self.obj.extend(items, num=num)
-            self.__setitem__(items, value)
-        else:
-            self.obj.iloc.__setitem__(iloc_items[0], value)
-
-
-class LocDF(Loc):
-    def __init__(self, obj=None):
-        if obj is None:
-            return
-        super().__init__(obj)
 
     def __setitem__(self, items, value, what=None):
         # if it's a dataframe, send straight to iloc. It's a boolean key
