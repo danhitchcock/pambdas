@@ -1,3 +1,6 @@
+"""
+Contains the .loc and .iloc indexers for both DataFrames and Series
+"""
 from copy import copy
 import itertools
 
@@ -10,11 +13,18 @@ class ILocDF:
     """
 
     def __init__(self, obj=None):
+        """
+        Initializes the indexer
+        :param obj: Series
+        """
         if obj is None:
             return
         self.obj = obj
 
     def __getitem__(self, items):
+        """
+        Getitem for DataFrames based on index number
+        """
         data = self.obj.data
         index = self.obj.index
         columns = self.obj.columns
@@ -63,7 +73,6 @@ class ILocDF:
             # eg [1:3, 0]
             index = index[items[0]]
             name = columns[items[1]]
-            data = data
             view = slice(
                 data_items[0].start + data_items[1] * step,
                 data_items[0].stop + data_items[1] * step,
@@ -76,7 +85,6 @@ class ILocDF:
             start = data_items[0] + step * data_items[1].start
             stop = data_items[0] + step * data_items[1].stop
             view = slice(start, stop, step)
-            data = data
         elif isinstance(items[0], int) and isinstance(items[1], self.obj.ITERABLE_1D):
             # eg .iloc[0, [1, 2, 3]]
             name = index[items[0]]
@@ -96,11 +104,9 @@ class ILocDF:
         #####################
         elif isinstance(items[0], slice) and isinstance(items[1], slice):
             # e.g. .iloc[1:3, :]
-            data = data
             name = columns[items[1]]
             index = index[items[0]]
             view = tuple(data_items)
-            step = step
         elif isinstance(items[0], self.obj.ITERABLE_1D) and isinstance(items[1], slice):
             # e.g. .iloc[[1, 2], :]
             # iterate through row
@@ -144,8 +150,12 @@ class ILocDF:
             return self.obj.series_from_data(data, index, name, view)
         if isinstance(index, tuple) and isinstance(name, tuple):
             return self.obj.from_data(data, index, name, view, step)
+        raise IndexError("Unhandled params in DF .iloc getitem.")
 
     def __setitem__(self, items, value):
+        """
+        Setitem for DataFrames based on index number
+        """
         data = self.obj.data
         step = self.obj.step
 
@@ -249,7 +259,7 @@ class ILocDF:
         if is_2d_bool(data_items[0]):
             try:
                 data_items[0] = data_items[0].values
-            except:
+            except AttributeError:
                 pass
 
             for i, row in enumerate(data_items[0]):
@@ -316,6 +326,10 @@ class ILocSer:
     ITERABLE_1D = (list, set, tuple)
 
     def __init__(self, obj):
+        """
+        Initializes the indexer
+        :param obj: Series
+        """
         self.obj = obj
 
     def __getitem__(self, item):
@@ -342,8 +356,7 @@ class ILocSer:
             view = slice(0, len(index), 1)
             return self.obj.from_data(data, index, self.obj.name, view)
 
-        if isinstance(item, int):
-            return self.obj.values[item]
+        return self.obj.values[item]
 
     def __setitem__(self, item, value):
         """
@@ -391,6 +404,10 @@ class LocSer:
     ITERABLE_1D = (list, set, tuple)
 
     def __init__(self, obj):
+        """
+        Initializes the indexer
+        :param obj: Series
+        """
         self.obj = obj
 
     def __setitem__(self, items, value, what=None):
@@ -418,17 +435,21 @@ class LocSer:
 
 class LocDF:
     """
-    LocDF is the .loc indexer for DataFrames
+    Loc indexer for DataFrames
     """
 
     ITERABLE_1D = (list, set, tuple)
 
     def __init__(self, obj):
+        """
+        Initializes the indexer
+        :param obj: DataFrame
+        """
         self.obj = obj
 
     def __getitem__(self, items):
         """
-        Retrieves items on index name
+        Getitem for DataFrames based on index names
         """
         if isinstance(items, tuple):
             if is_2d_bool(items[0]):
@@ -450,7 +471,7 @@ class LocDF:
 
     def __setitem__(self, items, value):
         """
-        Sets items based on index name
+        Setitem for Series based on index names
         """
         # if it's a dataframe, send straight to iloc. It's a boolean key
         if is_2d_bool(items):
