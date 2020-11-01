@@ -1,3 +1,7 @@
+"""
+Contains a DataFrame and Series class, as well as a nan type
+"""
+__version__ = "0.0.1"
 from .dataframe import DataFrame, read_csv
 from .series import Series
 from .other_stuff import nan
