@@ -381,18 +381,9 @@ class ILocSer:
             self.obj.data[data_item] = value
 
 
-class Loc:
-    """
-    Loc indexer for both DF and Series
-    """
-
+class LocSer:
     ITERABLE_1D = (list, set, tuple)
 
-    def __init__(self, obj):
-        self.obj = obj
-
-
-class LocSer(Loc):
     def __init__(self, obj):
         self.obj = obj
 
@@ -416,11 +407,11 @@ class LocSer(Loc):
         return self.obj.iloc[iloc_items]
 
 
-class LocDF(Loc):
-    def __init__(self, obj=None):
-        if obj is None:
-            return
-        super().__init__(obj)
+class LocDF:
+    ITERABLE_1D = (list, set, tuple)
+
+    def __init__(self, obj):
+        self.obj = obj
 
     def __getitem__(self, items):
         """
