@@ -538,7 +538,19 @@ class DataFrame:
         return self.apply(lambda x: sum(x) / len(x), axis=axis, dropna=dropna)
 
     def sum(self, axis=0, dropna=True):
-        return self.apply(lambda x: sum(x), axis=axis, dropna=dropna)
+        if axis == 0:
+            iterator = self.iterrows
+        else:
+            iterator = self.itercols
+
+        res = None
+        for item in iterator():
+            if item is None:
+                res = item[1]
+            else:
+                res += item[1]
+        return res
+        # return self.apply(lambda x: sum(x), axis=axis, dropna=dropna)
 
 
 class GroupBy:
