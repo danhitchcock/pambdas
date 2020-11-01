@@ -450,7 +450,11 @@ class DataFrame:
                 # if the function is reducing and works on an iterable, try that
                 if dropna:
                     item[1] = item[1].dropna()
-                res.append(func(item[1]))
+                # it it was all nans, just put a nan there
+                if len(item[1]) == 0:
+                    res.append(nan)
+                else:
+                    res.append(func(item[1]))
             except TypeError:
                 try:
                     # otherwise, elementwise
@@ -460,7 +464,6 @@ class DataFrame:
                     continue
 
             index.append(item[0])
-
         if isinstance(res[0], Series):
             if axis == 0:
                 return self.class_init(res).transpose()
@@ -477,7 +480,7 @@ class DataFrame:
                 return
 
     def itercols(self):
-        for i in range(len(self)):
+        for i in range(len(self.columns)):
             try:
                 yield (self.columns[i], self.iloc[:, i])
             except:
@@ -549,6 +552,7 @@ class DataFrame:
                 res = item[1]
             else:
                 res += item[1]
+        res.name = self.name
         return res
         # return self.apply(lambda x: sum(x), axis=axis, dropna=dropna)
 

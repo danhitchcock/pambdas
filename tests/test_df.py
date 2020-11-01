@@ -583,6 +583,10 @@ def test_df_methods():
     assert df.apply(sum, axis=0).values == [4, 9]
     assert df.values == [[1, 2], [nan, 3], [3, 4]]
 
+    a = pam.DataFrame([[pam.nan, pam.nan, pam.nan], [1, 2, 3]])
+    assert a.apply(lambda x: sum(x), axis=1).values == [pam.nan, 6]
+    assert a.apply(lambda x: sum(x), axis=0).values == [1, 2, 3]
+
     ### columns
     assert df.apply(multiply, axis=0).values == [3, 24]
     assert df.values == [[1, 2], [nan, 3], [3, 4]]
@@ -1044,7 +1048,7 @@ def test_groupby():
     df = pam.DataFrame(
         {
             "Animal": ["Falcon", "Falcon", "Parrot", "Parrot"],
-            "Max Speed": [100, nan, 24, 26],
+            "Max Speed": [nan, nan, 24, 26],
             "Min Speed": [20, 22, 2, 4],
         }
     )
@@ -1053,7 +1057,7 @@ def test_groupby():
         .apply(lambda x: sum(x))
         .loc[["Falcon", "Parrot"], ["Max Speed", "Min Speed"]]
     )
-    assert res.values == [[100, 42], [50, 6]]
+    assert res.values == [[nan, 42], [50, 6]]
     assert res.columns == ("Max Speed", "Min Speed")
     assert res.index == ("Falcon", "Parrot")
 
