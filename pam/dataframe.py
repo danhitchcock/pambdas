@@ -1,3 +1,6 @@
+"""
+Contains the DataFrame class
+"""
 import itertools
 import csv
 from .series import Series
@@ -101,19 +104,15 @@ class DataFrame:
             return self.loc[cols]
         elif isinstance(cols, slice) or is_bool(cols) or is_2d_bool(cols):
             return self.loc[cols, :]
-        else:
-            return self.loc[:, cols]
+        return self.loc[:, cols]
 
     def __setitem__(self, key, value):
         """
         This implementation just adds a new columns
-        :param key:
-        :param value:
-        :return:
         """
-        # if it is a single item, call .loc[:, key]
-        # if is a slice, call .loc[key, :]
-        # if its an iterable call .loc[:, key]
+        # if two params were provided (i.e. if it's a tuple) forward it
+        # if it is a slice or boolean, forward as row indexer
+        # otherwise, forward as column indexer
         if isinstance(key, (tuple, self.__class__)):
             self.loc[key] = value
         elif isinstance(key, slice) or is_bool(key):
@@ -159,7 +158,7 @@ class DataFrame:
 
     def __invert__(self):
         df_cp = self.copy()
-        for i, val in enumerate(df_cp.data):
+        for i in range(len(df_cp.data)):
             df_cp.data[i] = not df_cp.data[i]
         return df_cp
 
@@ -238,7 +237,8 @@ class DataFrame:
 
     def bound_int_to_df(self, raw_int, axis):
         """
-        Transforms an index int to the actual axis index of data, taking bounds into account
+        Transforms an index int to the actual axis index of data,
+        taking bounds into account
         e.g.
         [0,| 1, 2, 3, 4, 5, | 6]
         If `2` is given, it should access "3", thus index 2 is actually 3.
@@ -371,7 +371,7 @@ class DataFrame:
         else:
             try:
                 return names.index(item)
-            except:
+            except ValueError:
                 return None
 
     def add_empty_series(self, name, axis=0):
@@ -438,11 +438,11 @@ class DataFrame:
         res = []
         index = []
         if axis == 0:
-            it = self.iterrows
+            iterator = self.iterrows
         else:
-            it = self.itercols
+            iterator = self.itercols
 
-        for row in it():
+        for row in iterator():
             try:
                 # if the function is reducing and works on an iterable, try that
                 res.append(func(row[1]))

@@ -185,19 +185,22 @@ class ILocDF:
         del items
 
         #################
-        # Returns an item
+        # Sets an item
         #################
         if isinstance(data_items[0], int) and isinstance(data_items[1], int):
             # eg [1, 0]
             data[data_items[0] + step * data_items[1]] = value
         ##################
-        # Returns a Series
+        # Sets a 1D section
         ##################
         if isinstance(data_items[0], slice) and isinstance(data_items[1], int):
             # eg [1:3, 0]
             if not isinstance(value, self.obj.ITERABLE_1D):
                 value = [value] * (data_items[0].stop - data_items[0].start)
-
+            try:
+                value = value[list(self.obj.index)]
+            except TypeError:
+                pass
             data[
                 data_items[0].start
                 + step * data_items[1] : data_items[0].stop
@@ -210,7 +213,10 @@ class ILocDF:
             stop = data_items[0] + step * data_items[1].stop
             if not isinstance(value, self.obj.ITERABLE_1D):
                 value = [value] * (data_items[1].stop - data_items[1].start)
-
+            try:
+                value = value[list(self.obj.columns)]
+            except TypeError:
+                pass
             for i, val in zip(range(start, stop, step), value):
                 data[i] = val
         if isinstance(data_items[0], int) and isinstance(
@@ -232,7 +238,7 @@ class ILocDF:
                 data[i + step * data_items[1]] = val
 
         #####################
-        # Returns a DataFrame
+        # Sets a 2D section
         #####################
         # warning: everything below is very messy.
 
@@ -350,12 +356,11 @@ class ILocSer:
                 item = [i for i, val in enumerate(item) if val]
 
             index = self.obj.index
-            index = [index[i] for i in item]
+            index = [index[i] if i is not None else None for i in item]
             data = self.obj.values
-            data = [data[i] for i in item]
+            data = [data[i] if i is not None else nan for i in item]
             view = slice(0, len(index), 1)
             return self.obj.from_data(data, index, self.obj.name, view)
-
         return self.obj.values[item]
 
     def __setitem__(self, item, value):
@@ -430,7 +435,12 @@ class LocSer:
         if is_bool(items):
             return self.obj.iloc[items]
         iloc_items = self.obj.index_of(items)
-        return self.obj.iloc[iloc_items]
+        if iloc_items is None:
+            raise KeyError("%s not found in index." % items)
+        ser = self.obj.iloc[iloc_items]
+        if isinstance(ser, self.obj.__class__):
+            ser.index = tuple(items)
+        return ser
 
 
 class LocDF:

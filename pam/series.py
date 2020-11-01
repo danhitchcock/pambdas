@@ -1,3 +1,6 @@
+"""
+Contains the Series class
+"""
 from datetime import datetime
 from .indexers import LocSer, ILocSer
 from .other_stuff import nan, is_bool
@@ -13,6 +16,9 @@ class Series:
 
     @classmethod
     def from_data(cls, data, index, name=None, view=slice(None, None)):
+        """
+        Creates a Series from data and an index
+        """
         self = cls()
         self.data = data  # full 1D dataset.
         self.index = index  # index, unique to series
@@ -51,10 +57,9 @@ class Series:
         self.loc.__setitem__(key, value)
 
     def __getitem__(self, item):
-        self.loc.__getitem__(item)
+        return self.loc.__getitem__(item)
 
     def __str__(self):
-
         return (
             "Series Name: "
             + str(self.name)
@@ -68,12 +73,11 @@ class Series:
     def __repr__(self):
         return str(self)
 
-    def __iter__(self):
-        return iter(self.data[self.view])
-
     def index_of(self, item):
         """
         Returns the integer index of values in the index.
+        If it is a tuple and it's not found, raises KeyError.
+        If it is another kind of iterable and not found, adds None
 
         :param item: slice, iterable, any hashable object
 
@@ -82,12 +86,16 @@ class Series:
         names = self.index
 
         if isinstance(item, self.ITERABLE_1D + (self.__class__,)):
+
             items = []
             for i in item:
                 try:
                     items.append(names.index(i))
                 except ValueError:
-                    raise KeyError("Series label %s not found." % i)
+                    if isinstance(item, tuple):
+                        raise KeyError("%s not found in index." % i)
+                    else:
+                        items.append(None)
             return items
         elif isinstance(item, slice):
             try:
@@ -195,7 +203,7 @@ class Series:
             try:
                 yield self.iloc[i]
             except IndexError:
-                raise StopIteration
+                return
 
     def __iter__(self):
         for val in self.values:
@@ -203,7 +211,8 @@ class Series:
 
     def bound_slice(self, slc):
         """
-        Converts a slice to the actual slice used to reference the data. Does not raise bounds error.
+        Converts a slice to the actual slice used to reference the
+        data. Does not raise bounds error.
         """
         start = slc.start
         stop = slc.stop
@@ -225,7 +234,8 @@ class Series:
 
     def bound_int(self, idx):
         """
-        Converts an index to the actual index of the underlying data. Does not raise out of range errors.
+        Converts an index to the actual index of the underlying
+        data. Does not raise out of range errors.
         :param idx: int, desired index.values data
         :return: int, actual index of data
         """
