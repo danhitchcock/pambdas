@@ -310,8 +310,7 @@ class ILocDF:
 
 class ILocSer:
     """
-    This could probably be split into two class -- a dataframe indexer and a Series
-    indexer
+    ILoc indexer for Series
     """
 
     ITERABLE_1D = (list, set, tuple)
@@ -320,6 +319,9 @@ class ILocSer:
         self.obj = obj
 
     def __getitem__(self, item):
+        """
+        Setitem for Series based on index number
+        """
         if isinstance(item, slice):
             item = slice(
                 item.start if item.start is not None else 0,
@@ -344,6 +346,9 @@ class ILocSer:
             return self.obj.values[item]
 
     def __setitem__(self, item, value):
+        """
+        Setitem for Series based on index number
+        """
         # convert to bool, or bound
         if isinstance(item, self.ITERABLE_1D + (self.obj.__class__,)):
             # if it's a boolean
@@ -379,12 +384,19 @@ class ILocSer:
 
 
 class LocSer:
+    """
+    Loc indexer for Series
+    """
+
     ITERABLE_1D = (list, set, tuple)
 
     def __init__(self, obj):
         self.obj = obj
 
     def __setitem__(self, items, value, what=None):
+        """
+        Setitem for Series based on index names
+        """
         iloc_items = self.obj.index_of(items)
 
         # if index_of returned none, create it
@@ -396,7 +408,7 @@ class LocSer:
 
     def __getitem__(self, items):
         """
-        Getitem for series. Should only have 1 input -- a tuple will be converted to a list.
+        Getitem for Series based on index names
         """
         if is_bool(items):
             return self.obj.iloc[items]
@@ -405,6 +417,10 @@ class LocSer:
 
 
 class LocDF:
+    """
+    LocDF is the .loc indexer for DataFrames
+    """
+
     ITERABLE_1D = (list, set, tuple)
 
     def __init__(self, obj):
@@ -412,10 +428,9 @@ class LocDF:
 
     def __getitem__(self, items):
         """
-        getitem is the same for both DF and Series
+        Retrieves items on index name
         """
         if isinstance(items, tuple):
-
             if is_2d_bool(items[0]):
                 return self.obj.iloc[items]
             # items arrive as slice and series
@@ -433,7 +448,10 @@ class LocDF:
             )
         return self.obj.iloc[iloc_items]
 
-    def __setitem__(self, items, value, what=None):
+    def __setitem__(self, items, value):
+        """
+        Sets items based on index name
+        """
         # if it's a dataframe, send straight to iloc. It's a boolean key
         if is_2d_bool(items):
             self.obj.iloc.__setitem__(items, value)
