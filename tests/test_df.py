@@ -1100,3 +1100,29 @@ def test_groupby():
     assert res.values == [[nan, 42], [50, 6]]
     assert res.columns == ("Max Speed", "Min Speed")
     assert res.index == ("Falcon", "Parrot")
+
+
+def test_concat():
+    df1 = pam.DataFrame(
+        [["a", 1, "a"], ["b", 2, "b"]], columns=["letter", "number", "date"]
+    )
+    df2 = pam.DataFrame([["c", 3], ["d", 4]], columns=["letter", "number"])
+
+    assert pam.concat([df1, df2]) == pam.DataFrame(
+        {
+            "letter": ["a", "b", "c", "d"],
+            "number": [1, 2, 3, 4],
+            "date": ["a", "b", nan, nan],
+        }
+    )
+    assert pam.concat([df1, df2], join="inner") == pam.DataFrame(
+        {"letter": ["a", "b", "c", "d"], "number": [1, 2, 3, 4]}
+    )
+    assert pam.concat([df1, df2], ignore_index=True) == pam.DataFrame(
+        {
+            "letter": ["a", "b", "c", "d"],
+            "number": [1, 2, 3, 4],
+            "date": ["a", "b", nan, nan],
+        },
+        index=[0, 1, 0, 1],
+    )
