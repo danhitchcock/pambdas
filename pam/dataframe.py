@@ -406,26 +406,67 @@ class DataFrame:
             self.shape = (self.shape[0], self.shape[1] + 1)
             self.view = (self.view[0], slice(self.view[1].start, self.view[1].stop + 1))
 
-    def append(self, other, ignore_index=True):
+    def append(self, other, ignore_index=False):
+        """
+        Appends either a DataFrame or Series.
 
-        columns = self.columns + tuple(
-            col for col in other.columns if col not in self.columns
-        )
-        data_columns = []
-        for col in columns:
-            if col in self.columns:
-                temp = self[col].values
+        :param other: DataFrame or Series
+        :param ignore_index: Bool, If false, will create a new index
+        :return: DataFrame
+        """
+
+        if isinstance(other, self.__class__):
+            # Determine new columns
+            columns = self.columns + tuple(
+                col for col in other.columns if col not in self.columns
+            )
+            # Create data, with nans if there are new columns
+            data_columns = []
+            for col in columns:
+                if col in self.columns:
+                    temp = self[col].values
+                else:
+                    temp = [nan] * len(self)
+                if col in other.columns:
+                    temp += other[col].values
+                else:
+                    temp += [nan] * len(other)
+                data_columns.append(temp)
+
+            # new index
+            if ignore_index:
+                index = None
             else:
-                temp = [nan] * len(self)
-            if col in other.columns:
-                temp += other[col].values
+                index = self.index + other.index
+        elif isinstance(other, self.ITERABLE_1D):
+            if not ignore_index and other.name is None:
+                raise TypeError(
+                    "Can only append a Series/Array if ignore_index=True or if the Series has a name"
+                )
+            columns = self.columns + tuple(
+                col for col in other.index if col not in self.columns
+            )
+            # generate new data
+            data_columns = []
+            for col in columns:
+                # df data
+                if col in self.columns:
+                    temp = self[col].values
+                else:
+                    temp = [nan] * len(self)
+                # iterable data
+                if col in other.index:
+                    temp.append(other[col])
+                else:
+                    temp.append(nan)
+                data_columns.append(temp)
+
+            # new index
+            if ignore_index:
+                index = None
             else:
-                temp += [nan] * len(other)
-            data_columns.append(temp)
-        if ignore_index:
-            index = None
-        else:
-            index = self.index + other.index
+                index = self.index + other.name
+        # new dataframe
         return self.class_init(
             {k: v for k, v in zip(columns, data_columns)}, index=index
         )
