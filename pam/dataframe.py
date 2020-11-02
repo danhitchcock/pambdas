@@ -486,6 +486,9 @@ class DataFrame:
             except:
                 return
 
+    def iteritems(self):
+        return self.itercols()
+
     def transpose(self):
         new_cols = self.index
         new_index = self.columns

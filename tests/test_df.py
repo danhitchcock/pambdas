@@ -680,6 +680,37 @@ def test_df_methods():
     assert df.equals(df2)
     assert df2.index == (0, 1, 2, 3, 4)
 
+    ## test iterrows()
+    data = [[1, nan], [2, 10], [nan, nan], [0, 0], [10, -1]]
+    row_names = [10, 11, 12, 13, 14]
+    columns = ["one", "two"]
+    df = pam.DataFrame(data, index=row_names, columns=columns)
+    rows = [(pam.Series(row, index=columns, name=j)) for row, j in zip(data, row_names)]
+    for row, row_name, row_tuple in zip(rows, row_names, df.iterrows()):
+        assert row_tuple[0] == row_name
+        assert row_tuple[1] == row
+
+    data = [[1, nan], [2, 10], [nan, nan], [0, 0], [10, -1]]
+    row_names = [10, 11, 12, 13, 14]
+    col_names = ["one", "two"]
+    df = pam.DataFrame(data, index=row_names, columns=col_names)
+    rows = [pam.Series(row, index=col_names, name=j) for row, j in zip(data, row_names)]
+    cols = [
+        pam.Series(col, index=row_names, name=j)
+        for col, j in zip(zip(*data), col_names)
+    ]
+    for row, row_name, row_tuple in zip(rows, row_names, df.iterrows()):
+        assert row_tuple[0] == row_name
+        assert row_tuple[1] == row
+
+    for col, col_name, col_tuple in zip(cols, col_names, df.itercols()):
+        assert col_tuple[0] == col_name
+        assert col_tuple[1] == col
+
+    for col, col_name, col_tuple in zip(cols, col_names, df.iteritems()):
+        assert col_tuple[0] == col_name
+        assert col_tuple[1] == col
+
 
 def test_df_operators():
     df = pam.DataFrame([[0, 10, 20], [1, 11, 21]])
