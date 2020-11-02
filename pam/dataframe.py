@@ -3,6 +3,7 @@ Contains the DataFrame class
 """
 import itertools
 import csv
+import functools
 from .series import Series
 from .indexers import ILocDF, LocDF
 from .other_stuff import nan, is_bool, is_2d_bool
@@ -27,6 +28,7 @@ class DataFrame:
         self.columns = tuple(columns) if columns else tuple()  # type: tuple
         self.index = tuple(index) if index else tuple()  # type: tuple
         self.data = []  # type: list
+        self.name = None  # type: str
         self.step = 0  # type: int
         self.shape = (0, 0)  # type: tuple
         self.view = (slice(0, 0), slice(0, 0))  # type: tuple
@@ -45,7 +47,7 @@ class DataFrame:
                 try:
                     self.index = tuple(d.name for d in data)
                     self.columns = data[0].index
-                except:
+                except AttributeError:
                     pass
                 self.step = len(data)
 
@@ -433,31 +435,42 @@ class DataFrame:
         cp.data = [func(item) for item in cp.data]
         return cp
 
-    def apply(self, func, axis=0):
+    def apply(self, func, axis=0, dropna=True):
 
         res = []
         index = []
         if axis == 0:
-            iterator = self.iterrows
-        else:
             iterator = self.itercols
+        else:
+            iterator = self.iterrows
 
-        for row in iterator():
+        for item in iterator():
+            item = list(item)
             try:
                 # if the function is reducing and works on an iterable, try that
-                res.append(func(row[1]))
-            except:
-                # otherwise, elementwise
-                res.append(row[1].apply(func))
-            index.append(row[0])
+                if dropna:
+                    item[1] = item[1].dropna()
+                # it it was all nans, just put a nan there
+                if len(item[1]) == 0:
+                    res.append(nan)
+                else:
+                    res.append(func(item[1]))
+            except TypeError:
+                try:
+                    # otherwise, elementwise
+                    res.append(item[1].apply(func))
+                except TypeError:
+                    # otherwise, skip
+                    continue
 
+            index.append(item[0])
         if isinstance(res[0], Series):
-            if axis == 1:
+            if axis == 0:
                 return self.class_init(res).transpose()
             else:
                 return self.class_init(res)
         else:
-            return Series(res, index)
+            return Series(res, index, name=self.name)
 
     def iterrows(self):
         for i in range(len(self)):
@@ -467,11 +480,14 @@ class DataFrame:
                 return
 
     def itercols(self):
-        for i in range(len(self)):
+        for i in range(len(self.columns)):
             try:
-                yield (self.index[i], self.iloc[:, i])
+                yield (self.columns[i], self.iloc[:, i])
             except:
                 return
+
+    def iteritems(self):
+        return self.itercols()
 
     def transpose(self):
         new_cols = self.index
@@ -511,8 +527,83 @@ class DataFrame:
 
         return cp
 
+    def groupby(self, by):
+        """
+        Simple groupby implementation
+        """
+        gb = GroupBy()
+
+        for item in self[by].unique():
+            df = self.loc[self[by] == item, :]
+            df.name = item
+            df.drop(by)
+            gb.dfs.append(df)
+        return gb
+
+    def mean(self, axis=0, dropna=True):
+        return self.apply(lambda x: sum(x) / len(x), axis=axis, dropna=dropna)
+
+    def sum(self, axis=0, dropna=True):
+        if axis == 0:
+            iterator = self.iterrows
+        else:
+            iterator = self.itercols
+
+        res = None
+        for item in iterator():
+            if item is None:
+                res = item[1]
+            else:
+                res += item[1]
+        res.name = self.name
+        return res
+        # return self.apply(lambda x: sum(x), axis=axis, dropna=dropna)
+
+
+class GroupBy:
+    """
+    GroupBy class for DataFrame
+    """
+
+    def __init__(self):
+        """
+        Collection of DataFrames
+        """
+        self.dfs = []
+
+    def apply(self, func, axis=0, dropna=True):
+        """
+        Applies a method
+        """
+        res_ser = []
+        for df in self.dfs:
+            res_ser.append(df.apply(func, axis=axis, dropna=dropna))
+        return DataFrame(res_ser)
+
+    def __sum__(self):
+        pass
+
+    def __getattr__(self, item):
+        """
+        Returns a method containing a for loop of partialized
+        methods, awaiting *args and **kwargs
+        """
+        return functools.partial(self.loop_func, method_name=item)
+
+    def loop_func(self, method_name, *args, **kwargs):
+        """
+        The function to be executed with args and kwargs
+        """
+        res_ser = []
+        for df in self.dfs:
+            res_ser.append(df.__getattribute__(method_name)(*args, **kwargs))
+        return DataFrame(res_ser)
+
 
 def read_csv(filepath, sep=",", header=0, names=None, index_col=None):
+    """
+    Reads CSV file into dataframe
+    """
     # see if there is an fspath
     try:
         filepath = filepath.__fspath__()

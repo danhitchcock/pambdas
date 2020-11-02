@@ -21,7 +21,7 @@ class Series:
         """
         self = cls()
         self.data = data  # full 1D dataset.
-        self.index = index  # index, unique to series
+        self.index = tuple(index)  # index, unique to series
         self.name = name
         self.view = view  # data[view] = the values
         self.iloc = ILocSer(self)
@@ -140,6 +140,7 @@ class Series:
     def __eq__(self, other):
         if isinstance(other, (self.ITERABLE_1D, type(self))):
             if isinstance(other, type(self)):
+                print(other.index, self.index)
                 if other.index != self.index:
                     raise ValueError(
                         "Can only compare identically-labeled Series objects"
@@ -293,6 +294,102 @@ class Series:
             new_index = list(nan_index) + list(new_index)
 
         return self.from_data(new_values, new_index, name=self.name)
+
+    def unique(self):
+        return list(set(self.values))
+
+    def __add__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] += val
+        else:
+            for i in range(len(self)):
+                cp.data[i] += other
+        return cp
+
+    def __radd__(self, other):
+        try:
+            return self + other
+        except:
+            return self
+        # if other is not 0:
+        #     return self + other
+        # else:
+        #     return self
+
+    def __mul__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] *= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] *= other
+        return cp
+
+    def __truediv__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] /= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] /= other
+        return cp
+
+    def __floordiv__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] //= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] //= other
+        return cp
+
+    def __pow__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] **= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] **= other
+        return cp
+
+    def dropna(self):
+        cp = self.copy()
+        cp = cp[~self.isna()]
+        return cp
+
+    def isna(self):
+        """
+        Returns a bool of whether or not an item is a nan
+        :return: Series
+        """
+        cp = self.copy()
+        cp.data = [item is nan for item in self.values]
+        return cp
+
+    def __invert__(self):
+        cp = self.copy()
+        for i in range(len(cp)):
+            cp.data[i] = not cp.data[i]
+        return cp
+
+    def mean(self, dropna=True):
+        if dropna:
+            values = self.dropna().values
+        return sum(values) / len(values)
+
+    def sum(self, dropna=True):
+        if dropna:
+            values = self.dropna().values
+        res = values[0]
+        for item in values[1:]:
+            res += item
+        return res
 
 
 class STR:
