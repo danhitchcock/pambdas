@@ -1,3 +1,6 @@
+from functools import reduce
+
+
 class NaN:
     def __eq__(self, *args):
         return False
@@ -90,3 +93,48 @@ def invert(item):
         res = [not val for val in item]
         return res
     return res
+
+
+def concat(items, axis=0, join="outer", ignore_index=False):
+    """
+    Appends either a DataFrame or Series.
+
+    :param other: DataFrame or Series
+    :param ignore_index: Bool, If false, will create a new index
+    :return: DataFrame
+    """
+    # append top and bottom
+    if axis == 0:
+        join_on = "columns"
+    else:
+        join_on = "index"
+
+    # build columns
+    columns = [set(getattr(item, join_on)) for item in items]
+    if join == "outer":
+        columns = list(reduce(lambda x, y: x.union(y), columns))
+    else:
+        columns = list(reduce(lambda x, y: x.intersection(y), columns))
+
+    # Create data, with nans if there are new columns
+    data_columns = []
+    for col in columns:
+        temp = []
+        for item in items:
+            if col in item.columns:
+                temp += item[col].values
+            else:
+                temp += [nan] * len(item)
+        data_columns.append(temp)
+
+    # new index
+    if ignore_index:
+        index = None
+    else:
+        index = []
+        for item in items:
+            index += item.index
+
+    return items[0].class_init(
+        {k: v for k, v in zip(columns, data_columns)}, index=index
+    )
