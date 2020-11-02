@@ -97,12 +97,12 @@ def invert(item):
 
 def concat(items, axis=0, join="outer", ignore_index=False):
     """
-            Appends either a DataFrame or Series.
+    Appends either a DataFrame or Series.
 
-            :param other: DataFrame or Series
-            :param ignore_index: Bool, If false, will create a new index
-            :return: DataFrame
-            """
+    :param other: DataFrame or Series
+    :param ignore_index: Bool, If false, will create a new index
+    :return: DataFrame
+    """
     # append top and bottom
     if axis == 0:
         join_on = "columns"
