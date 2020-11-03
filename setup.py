@@ -28,9 +28,9 @@ def get_version(rel_path):
 
 
 setup(
-    name="pam",
-    version=get_version("pam/__init__.py"),
+    name="pambdas",
+    version=get_version("pambdas/__init__.py"),
     description="A pure-Python DataFrame implementation, with a similar API to Pandas.",
     author="Daniel Hitchcock",
-    packages=["pam"],
+    packages=["pambdas"],
 )
