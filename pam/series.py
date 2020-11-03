@@ -140,7 +140,6 @@ class Series:
     def __eq__(self, other):
         if isinstance(other, (self.ITERABLE_1D, type(self))):
             if isinstance(other, type(self)):
-                print(other.index, self.index)
                 if other.index != self.index:
                     raise ValueError(
                         "Can only compare identically-labeled Series objects"
