@@ -52,8 +52,6 @@ nan = NaN()
 def is_bool(key):
     """
     Checks if the first value in some kind of item is a boolean value
-    :param key:
-    :return:
     """
     try:
         item0 = key.iloc[0]
@@ -68,6 +66,9 @@ def is_bool(key):
 
 
 def is_2d_bool(key):
+    """
+    Checks if an object is a 2D bool key
+    """
     try:
         item0 = key.iloc[0, 0]
     except AttributeError:
@@ -166,6 +167,49 @@ def concat_df(items, axis=0, join="outer", ignore_index=False):
     return items[0].class_init(data, columns=index, index=indices)
 
 
+def concat_ser(items, axis=0, join="outer", ignore_index=False):
+    """
+    Concatenates tweo or more Series
+
+    :param items: list, Series
+    :param axis: int, default 0
+    :param join: str, 'inner' or 'outer'
+    :param ignore_index: bool, default False
+    :return: DataFrame
+    """
+    # ugly, but necessary :/
+    from .dataframe import DataFrame
+
+    # axis is zero, just append series to self
+    if axis == 0:
+        data = []
+        index = []
+        for item in items:
+            data += item.values
+            index += item.index
+        return items[0].__class__(data, index=index, name=items[0].name)
+
+    # otherwise...
+    # generate new columns or index  based on join type
+    new_index = [item.index for item in items]
+    if join == "outer":
+        new_index = list(reduce(lambda x, y: list_union(x, y), new_index))
+    else:
+        new_index = list(reduce(lambda x, y: list_intersection(x, y), new_index))
+
+    # make the data
+    data = []
+    for item in items:
+        data.append([item[idx] if idx in item.index else nan for idx in new_index])
+
+    # make the index
+    if ignore_index:
+        columns = None
+    else:
+        columns = [item.name for item in items]
+    return DataFrame(list(zip(*data)), columns=columns, index=new_index)
+
+
 def list_intersection(a, b):
     """
     Returns the intersection of two lists
@@ -177,7 +221,7 @@ def list_union(a, b):
     """
     Returns a deduped union of two lists
     """
-    c = copy(a)
+    c = list(copy(a))
     for item in b:
         if item not in a:
             c.append(item)

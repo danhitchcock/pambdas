@@ -1103,6 +1103,37 @@ def test_groupby():
 
 
 def test_concat():
+    # test with Series
+    ser1 = pam.Series([1, 2, 3], name="1", index=["one", "two", "three"])
+    ser2 = pam.Series([1, 3, 4], name="2", index=["one", "three", "four"])
+
+    assert pam.concat([ser1, ser2]) == pam.Series(
+        [1, 2, 3, 1, 3, 4], index=["one", "two", "three", "one", "three", "four"]
+    )
+
+    assert pam.concat([ser1, ser2], axis=1).equals(
+        pam.DataFrame(
+            {"1": [1, 2, 3, nan], "2": [1, nan, 3, 4]},
+            index=["one", "two", "three", "four"],
+        )
+    )
+    assert pam.concat([ser1, ser2], axis=1, join="inner").equals(
+        pam.DataFrame(
+            {"1": [1, 3], "2": [1, 3]},
+            index=[
+                "one",
+                "three",
+            ],
+        )
+    )
+    assert pam.concat([ser1, ser2], axis=1, ignore_index=True).equals(
+        pam.DataFrame(
+            {0: [1, 2, 3, nan], 1: [1, nan, 3, 4]},
+            index=["one", "two", "three", "four"],
+        )
+    )
+
+    # Test with DataFrames
     df1 = pam.DataFrame(
         [["a", 1, "a"], ["b", 2, "b"]], columns=["letter", "number", "date"]
     )
