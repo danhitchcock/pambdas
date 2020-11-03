@@ -1,8 +1,8 @@
 import datetime
 from datetime import timezone
-import pam
+import pambdas as pam
 import pytest
-from pam.other_stuff import nan
+from pambdas.other_stuff import nan
 from functools import reduce
 
 

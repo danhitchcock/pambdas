@@ -1,5 +1,5 @@
 import datetime
-import pam
+import pambdas as pam
 
 print("Create DataFrame")
 df = pam.DataFrame([[1, "a", 2.0], [2, "b", 3.0]], columns=["int", "char", "float"])
