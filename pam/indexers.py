@@ -30,6 +30,7 @@ class ILocDF:
         columns = self.obj.columns
         step = self.obj.step
         view = self.obj.view
+        name = None
         # if it's a tuple, its multiple indicies. Otherwise, its one item, so
         # make a dummy index
         if isinstance(items, tuple):
@@ -150,7 +151,9 @@ class ILocDF:
             return self.obj.series_from_data(data, index, name, view)
         if isinstance(index, tuple) and isinstance(name, tuple):
             return self.obj.from_data(data, index, name, view, step)
-        raise IndexError("Unhandled params in DF .iloc getitem.")
+        raise IndexError(
+            "Unhandled params in DF .iloc getitem. Perhaps your are not referencing by index"
+        )
 
     def __setitem__(self, items, value):
         """
