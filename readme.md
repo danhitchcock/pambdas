@@ -9,9 +9,9 @@ Pambdas is designed to replicate the behavior of a Pandas DataFrame, but not rel
 Data is stored as a flat list, which much like Pandas, can be shared between DataFrames and Series.
 For example, changes to `ser` and `df2` are reflected in `df1`.
 ```python
-from pam import DataFrame
+import pambdas as pam
 
-df1 = DataFrame(
+df1 = pam.DataFrame(
     {"one": [1, 2, 3], "two": [4, 5, 6], "three": [7, 8, 9]}, index=[10, 20, 30]
 )
 ser = df1["two"]
