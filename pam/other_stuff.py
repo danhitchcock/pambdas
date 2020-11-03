@@ -1,4 +1,5 @@
 from functools import reduce
+from copy import copy
 
 
 class NaN:
@@ -97,7 +98,23 @@ def invert(item):
 
 def concat(items, axis=0, join="outer", ignore_index=False):
     """
-    Appends either a DataFrame or Series.
+    Concatenates DataFrames or Series
+
+    :param items: list, Series or DataFrames
+    :param axis: int, default 0
+    :param join: str, 'inner' or 'outer'
+    :param ignore_index: bool, default False
+    :return: DataFrame
+    """
+    if hasattr(items[0], "columns"):
+        return concat_df(items, axis, join, ignore_index)
+    else:
+        return concat_ser(items, axis, join, ignore_index)
+
+
+def concat_df(items, axis=0, join="outer", ignore_index=False):
+    """
+    Concatenates two or more dataframes
 
     :param other: DataFrame or Series
     :param ignore_index: Bool, If false, will create a new index
@@ -106,35 +123,62 @@ def concat(items, axis=0, join="outer", ignore_index=False):
     # append top and bottom
     if axis == 0:
         join_on = "columns"
+        index_on = "index"
     else:
         join_on = "index"
+        index_on = "columns"
 
     # build columns
-    columns = [set(getattr(item, join_on)) for item in items]
+    indices = [getattr(item, join_on) for item in items]
     if join == "outer":
-        columns = list(reduce(lambda x, y: x.union(y), columns))
+        indices = list(reduce(lambda x, y: list_union(x, y), indices))
     else:
-        columns = list(reduce(lambda x, y: x.intersection(y), columns))
+        indices = list(reduce(lambda x, y: list_intersection(x, y), indices))
 
     # Create data, with nans if there are new columns
-    data_columns = []
-    for col in columns:
+    data = []
+    for idx in indices:
         temp = []
         for item in items:
-            if col in item.columns:
-                temp += item[col].values
+            if idx in getattr(item, join_on):
+                if axis == 0:
+                    temp += item[idx].values
+                else:
+                    temp += item.loc[idx, :].values
             else:
-                temp += [nan] * len(item)
-        data_columns.append(temp)
+                if axis == 0:
+                    length = item.shape[0]
+                else:
+                    length = item.shape[1]
+                temp += [nan] * length
+        data.append(temp)
 
-    # new index
+    # new index. index if axis=0, columns if axis=1
     if ignore_index:
         index = None
     else:
         index = []
         for item in items:
-            index += item.index
+            index += getattr(item, index_on)
 
-    return items[0].class_init(
-        {k: v for k, v in zip(columns, data_columns)}, index=index
-    )
+    if axis == 0:
+        return items[0].class_init({k: v for k, v in zip(indices, data)}, index=index)
+    return items[0].class_init(data, columns=index, index=indices)
+
+
+def list_intersection(a, b):
+    """
+    Returns the intersection of two lists
+    """
+    return [item for item in a if item in b]
+
+
+def list_union(a, b):
+    """
+    Returns a deduped union of two lists
+    """
+    c = copy(a)
+    for item in b:
+        if item not in a:
+            c.append(item)
+    return c

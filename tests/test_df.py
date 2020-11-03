@@ -1108,21 +1108,33 @@ def test_concat():
     )
     df2 = pam.DataFrame([["c", 3], ["d", 4]], columns=["letter", "number"])
 
-    assert pam.concat([df1, df2]) == pam.DataFrame(
-        {
-            "letter": ["a", "b", "c", "d"],
-            "number": [1, 2, 3, 4],
-            "date": ["a", "b", nan, nan],
-        }
+    assert pam.concat([df1, df2]).equals(
+        pam.DataFrame(
+            {
+                "letter": ["a", "b", "c", "d"],
+                "number": [1, 2, 3, 4],
+                "date": ["a", "b", nan, nan],
+            }
+        )
     )
-    assert pam.concat([df1, df2], join="inner") == pam.DataFrame(
-        {"letter": ["a", "b", "c", "d"], "number": [1, 2, 3, 4]}
+    assert pam.concat([df1, df2], join="inner").equals(
+        pam.DataFrame({"letter": ["a", "b", "c", "d"], "number": [1, 2, 3, 4]})
     )
-    assert pam.concat([df1, df2], ignore_index=True) == pam.DataFrame(
-        {
-            "letter": ["a", "b", "c", "d"],
-            "number": [1, 2, 3, 4],
-            "date": ["a", "b", nan, nan],
-        },
-        index=[0, 1, 0, 1],
+    assert pam.concat([df1, df2], ignore_index=True).equals(
+        pam.DataFrame(
+            {
+                "letter": ["a", "b", "c", "d"],
+                "number": [1, 2, 3, 4],
+                "date": ["a", "b", nan, nan],
+            },
+            index=[0, 1, 0, 1],
+        )
+    )
+
+    assert pam.concat([df1, df2], axis=1).equals(
+        pam.DataFrame(
+            [["a", 1, "a", "c", 3], ["b", 2, "b", "d", 4]],
+            index=[0, 1],
+            columns=["letter", "number", "date", "letter", "number"],
+        )
     )

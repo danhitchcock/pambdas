@@ -167,6 +167,9 @@ class DataFrame:
     def __len__(self):
         return self.shape[0]
 
+    def __repr__(self):
+        return str(self)
+
     def drop(self, labels=None):
         """
         Drop both removes a specified column and trims internal data, producing a copy.
@@ -598,7 +601,6 @@ class DataFrame:
                 res += item[1]
         res.name = self.name
         return res
-        # return self.apply(lambda x: sum(x), axis=axis, dropna=dropna)
 
 
 class GroupBy:
