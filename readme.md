@@ -44,3 +44,4 @@ Check out `example.py` and give it a shot!
 * Every new feature should have a test.
 * The code is formatted with Black
 * Every branch name should start with the issue # it is addressing (i.e. 9_fix_concat)
+* Every pull request should have detailed instructions on what the changes are, and how to test them.
