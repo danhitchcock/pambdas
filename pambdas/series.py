@@ -307,6 +307,16 @@ class Series:
                 cp.data[i] += other
         return cp
 
+    def __sub__(self, other):
+        cp = self.copy()
+        if isinstance(other, self.ITERABLE_1D + (self.__class__,)):
+            for i, val in enumerate(other):
+                cp.data[i] -= val
+        else:
+            for i in range(len(self)):
+                cp.data[i] -= other
+        return cp
+
     def __radd__(self, other):
         try:
             return self + other
